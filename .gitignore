@@ -1,0 +1,4 @@
+node_modules/
+main.js
+.obsidian-plugin-dir
+.DS_Store
