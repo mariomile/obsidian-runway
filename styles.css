@@ -1,0 +1,308 @@
+/* Runway — task management for Obsidian */
+
+/* ── Shared: sections & rows ─────────────────────────────────────────── */
+
+.runway-section {
+  margin-bottom: var(--size-4-4);
+}
+
+.runway-section__head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--size-2-2);
+  padding: var(--size-2-1) 0;
+  border-bottom: 1px solid var(--background-modifier-border);
+  margin-bottom: var(--size-2-2);
+}
+
+.runway-section__title {
+  font-size: var(--font-ui-small);
+  font-weight: var(--font-semibold);
+  color: var(--text-normal);
+}
+
+.runway-section--overdue .runway-section__title {
+  color: var(--text-error);
+}
+
+.runway-section--today .runway-section__title {
+  color: var(--text-accent);
+}
+
+.runway-section__count {
+  font-size: var(--font-ui-smaller);
+  color: var(--text-faint);
+  font-variant-numeric: tabular-nums;
+}
+
+.runway-section__more {
+  margin-top: var(--size-2-2);
+  font-size: var(--font-ui-smaller);
+}
+
+.runway-row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--size-2-2);
+  padding: var(--size-2-1) var(--size-2-2);
+  border-radius: var(--radius-s);
+}
+
+.runway-row:hover {
+  background-color: var(--background-modifier-hover);
+}
+
+.runway-row__check {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  padding-top: 2px;
+  color: var(--text-muted);
+  cursor: var(--cursor);
+}
+
+.runway-row__check:hover {
+  color: var(--text-accent);
+}
+
+.runway-row[data-status='done'] .runway-row__check,
+.runway-row[data-status='cancelled'] .runway-row__check {
+  color: var(--text-faint);
+}
+
+.runway-row[data-status='in-progress'] .runway-row__check {
+  color: var(--color-cyan);
+}
+
+.runway-row__check svg {
+  width: var(--icon-s);
+  height: var(--icon-s);
+}
+
+.runway-row__main {
+  flex: 1;
+  min-width: 0;
+}
+
+.runway-row__desc {
+  font-size: var(--font-ui-small);
+  color: var(--text-normal);
+  cursor: var(--cursor);
+  overflow-wrap: anywhere;
+}
+
+.runway-row[data-status='done'] .runway-row__desc,
+.runway-row[data-status='cancelled'] .runway-row__desc {
+  color: var(--text-faint);
+  text-decoration: line-through;
+}
+
+.runway-row__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--size-2-1);
+  margin-top: 1px;
+}
+
+.runway-row__more {
+  flex-shrink: 0;
+  color: var(--text-faint);
+  cursor: var(--cursor);
+  opacity: 0;
+  padding-top: 2px;
+}
+
+.runway-row:hover .runway-row__more {
+  opacity: 1;
+}
+
+.runway-row__more:hover {
+  color: var(--text-normal);
+}
+
+.runway-row__more svg {
+  width: var(--icon-s);
+  height: var(--icon-s);
+}
+
+.runway-chip {
+  font-size: var(--font-ui-smaller);
+  color: var(--text-muted);
+  background-color: var(--background-secondary);
+  border-radius: var(--radius-s);
+  padding: 0 var(--size-2-1);
+  line-height: 1.6;
+  white-space: nowrap;
+}
+
+.runway-chip--due {
+  cursor: var(--cursor);
+}
+
+.runway-chip--due:hover {
+  background-color: var(--background-modifier-hover);
+  color: var(--text-normal);
+}
+
+.runway-chip--overdue {
+  color: var(--text-error);
+  background-color: rgba(var(--color-red-rgb), 0.1);
+}
+
+.runway-chip--priority {
+  background: none;
+  padding: 0;
+}
+
+.runway-chip--note {
+  color: var(--text-faint);
+  background: none;
+  cursor: var(--cursor);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 18em;
+}
+
+.runway-chip--note:hover {
+  color: var(--text-accent);
+}
+
+.runway-empty {
+  color: var(--text-faint);
+  font-size: var(--font-ui-small);
+  padding: var(--size-4-4);
+  text-align: center;
+}
+
+/* ── Sidebar view ────────────────────────────────────────────────────── */
+
+.runway-sidebar {
+  padding: 0 var(--size-4-2) var(--size-4-4);
+}
+
+.runway-sidebar__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--size-2-2) 0 var(--size-2-3);
+}
+
+.runway-sidebar__title {
+  font-size: var(--font-ui-medium);
+  font-weight: var(--font-semibold);
+}
+
+.runway-sidebar__actions {
+  display: flex;
+  gap: var(--size-2-1);
+}
+
+/* ── List view ───────────────────────────────────────────────────────── */
+
+.runway-list {
+  padding: var(--size-4-3) var(--size-4-6);
+  max-width: var(--file-line-width, 44em);
+  margin: 0 auto;
+}
+
+.runway-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-2-2);
+  margin-bottom: var(--size-4-2);
+}
+
+.runway-toolbar__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--size-2-2);
+}
+
+.runway-toolbar__search {
+  flex: 1;
+  min-width: 12em;
+}
+
+.runway-toolbar__select {
+  font-size: var(--font-ui-smaller);
+  max-width: 12em;
+}
+
+.runway-pill {
+  font-size: var(--font-ui-smaller);
+  padding: var(--size-2-1) var(--size-2-3);
+  border-radius: var(--radius-l);
+  background-color: var(--background-secondary);
+  color: var(--text-muted);
+  box-shadow: none;
+}
+
+.runway-pill.is-active {
+  background-color: var(--interactive-accent);
+  color: var(--text-on-accent);
+}
+
+.runway-list__count {
+  font-size: var(--font-ui-smaller);
+  color: var(--text-faint);
+  margin-bottom: var(--size-2-3);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Quick-add modal ─────────────────────────────────────────────────── */
+
+.runway-quick-add .runway-quick-add__input {
+  width: 100%;
+  margin-bottom: var(--size-4-2);
+}
+
+.runway-quick-add__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--size-2-2);
+  margin-bottom: var(--size-4-2);
+}
+
+.runway-quick-add__chip {
+  font-size: var(--font-ui-smaller);
+  padding: var(--size-2-1) var(--size-2-3);
+  border-radius: var(--radius-l);
+  background-color: var(--background-secondary);
+  color: var(--text-muted);
+  box-shadow: none;
+}
+
+.runway-quick-add__chip.is-active {
+  background-color: var(--interactive-accent);
+  color: var(--text-on-accent);
+}
+
+.runway-quick-add__priority {
+  margin-bottom: var(--size-4-2);
+}
+
+.runway-quick-add__target {
+  display: flex;
+  align-items: center;
+  gap: var(--size-2-2);
+  margin-bottom: var(--size-4-2);
+}
+
+.runway-quick-add__target-path {
+  font-size: var(--font-ui-smaller);
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+
+/* ── Small inputs in modals ──────────────────────────────────────────── */
+
+.runway-date-input,
+.runway-edit-input {
+  width: 100%;
+  margin-bottom: var(--size-4-2);
+}
