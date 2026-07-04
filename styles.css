@@ -234,6 +234,41 @@
   margin-left: auto;
 }
 
+/* Time segments — the primary, prominent list slicer */
+.runway-segments {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  padding: 2px;
+  border-radius: var(--radius-m);
+  background: var(--background-secondary);
+}
+
+.runway-segment {
+  height: 26px;
+  padding: 0 12px;
+  border: none;
+  border-radius: var(--radius-s);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  box-shadow: none;
+  cursor: var(--cursor);
+  transition: background-color var(--runway-t), color var(--runway-t);
+}
+
+.runway-segment:hover {
+  color: var(--text-normal);
+  background: var(--background-modifier-hover);
+}
+
+.runway-segment.is-active {
+  background: var(--background-primary);
+  color: var(--text-normal);
+  font-weight: var(--font-medium);
+  box-shadow: var(--shadow-s);
+}
+
 /* Status pills — compact, rounded, accent when active */
 .runway-pill {
   height: 24px;
