@@ -85,11 +85,11 @@ export class RunwaySidebarView extends ItemView {
     const header = root.createDiv({ cls: 'runway-sidebar__header' });
     header.createSpan({ cls: 'runway-sidebar__title', text: 'Runway' });
     const actions = header.createDiv({ cls: 'runway-sidebar__actions' });
-    const add = actions.createEl('button', { cls: 'clickable-icon' });
+    const add = actions.createEl('button', { cls: 'runway-iconbtn' });
     setIcon(add, 'plus');
     add.setAttribute('aria-label', 'Nuovo task');
     add.addEventListener('click', () => new QuickAddModal(this.ctx).open());
-    const expand = actions.createEl('button', { cls: 'clickable-icon' });
+    const expand = actions.createEl('button', { cls: 'runway-iconbtn' });
     setIcon(expand, 'layout-list');
     expand.setAttribute('aria-label', 'Apri lista completa');
     expand.addEventListener('click', () => void this.ctx.openListView());

@@ -5,16 +5,63 @@ import { PRIORITY_EMOJI } from '../core/parse.ts';
 import { refOf, showTaskMenu } from './task-menu.ts';
 import { showDateMenu } from './date-menu.ts';
 import type { RunwayContext } from './context.ts';
-import type { Task } from '../types.ts';
+import type { DateEmoji, DayKey, Task } from '../types.ts';
 
 export interface TaskRowOptions {
-  /** Hide the note-name chip (e.g. when grouping by folder already says it). */
+  /** Hide the note-name chip (e.g. when grouping by note already says it). */
   showNote?: boolean;
 }
 
 function noteName(path: string): string {
   const slash = path.lastIndexOf('/');
   return path.slice(slash + 1).replace(/\.md$/, '');
+}
+
+/** Display text: collapse markdown/wiki links to their label, keep everything else. */
+export function displayText(description: string): string {
+  return description
+    .replace(/\[\[([^\]|]+)\|([^\]]+)\]\]/g, '$2')
+    .replace(/\[\[([^\]|]+)\]\]/g, '$1')
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+const STATUS_LABEL: Record<string, string> = {
+  todo: 'Completa',
+  'in-progress': 'Completa',
+  done: 'Riapri',
+  cancelled: 'Riapri',
+};
+
+/** Dot-marked date chip (horizon semantic colors), clickable to reschedule. */
+function renderDateChip(
+  meta: HTMLElement,
+  ctx: RunwayContext,
+  task: Task,
+  emoji: DateEmoji,
+  date: DayKey,
+  kind: 'due' | 'scheduled',
+): void {
+  const open = task.status !== 'done' && task.status !== 'cancelled';
+  const late = open && compareDayKeys(date, todayKey()) < 0;
+  const chip = meta.createSpan({
+    cls: `runway-chip runway-chip--${kind}${late ? ' runway-chip--overdue' : ''}`,
+  });
+  chip.createSpan({ cls: 'runway-chip__dot' });
+  chip.createSpan({ cls: 'runway-chip__label', text: date });
+  if (task.status === 'unknown') return;
+  chip.setAttribute(
+    'aria-label',
+    kind === 'due' ? 'Scadenza — clic per rischedulare' : 'Pianificato — clic per rischedulare',
+  );
+  chip.addEventListener('click', (event) => {
+    event.stopPropagation();
+    showDateMenu(event, ctx.app, date, {
+      onPick: (next) => void ctx.edits.reschedule(refOf(task), next, emoji),
+      onClear: () => void ctx.edits.clearDate(refOf(task), emoji),
+    });
+  });
 }
 
 /** One task row, shared by the sidebar and the list view. */
@@ -28,18 +75,11 @@ export function renderTaskRow(
   const row = container.createDiv({ cls: 'runway-row' });
   row.dataset.status = task.status;
 
-  const checkbox = row.createDiv({ cls: 'runway-row__check' });
-  const checkIcon: Record<string, string> = {
-    todo: 'circle',
-    'in-progress': 'circle-dot',
-    done: 'check-circle-2',
-    cancelled: 'x-circle',
-    unknown: 'help-circle',
-  };
-  setIcon(checkbox, checkIcon[task.status] ?? 'circle');
+  const checkWrap = row.createDiv({ cls: 'runway-row__check' });
+  checkWrap.createSpan({ cls: `runway-check runway-check--${task.status}` });
   if (task.status !== 'unknown') {
-    checkbox.setAttribute('aria-label', task.status === 'done' ? 'Riapri' : 'Completa');
-    checkbox.addEventListener('click', (event) => {
+    checkWrap.setAttribute('aria-label', STATUS_LABEL[task.status] ?? 'Completa');
+    checkWrap.addEventListener('click', (event) => {
       event.stopPropagation();
       const target = task.status === 'done' ? 'todo' : 'done';
       void ctx.edits.setStatus(ref, target);
@@ -47,52 +87,25 @@ export function renderTaskRow(
   }
 
   const main = row.createDiv({ cls: 'runway-row__main' });
-  const desc = main.createDiv({ cls: 'runway-row__desc', text: task.description || '(senza testo)' });
+  const desc = main.createDiv({
+    cls: 'runway-row__desc',
+    text: displayText(task.description) || '(senza testo)',
+  });
   desc.addEventListener('click', () => void ctx.edits.openAtLine(ref));
 
   const meta = main.createDiv({ cls: 'runway-row__meta' });
   if (task.priority !== null) {
     meta.createSpan({
-      cls: `runway-chip runway-chip--priority runway-chip--${task.priority}`,
+      cls: `runway-chip runway-chip--priority`,
       text: PRIORITY_EMOJI[task.priority],
+      attr: { 'aria-label': `Priorità: ${task.priority}` },
     });
   }
   if (task.due !== undefined) {
-    const overdue = compareDayKeys(task.due, todayKey()) < 0 && task.status !== 'done';
-    const dueChip = meta.createSpan({
-      cls: `runway-chip runway-chip--due${overdue ? ' runway-chip--overdue' : ''}`,
-      text: `📅 ${task.due}`,
-    });
-    if (task.status !== 'unknown') {
-      dueChip.setAttribute('aria-label', 'Rischedula');
-      dueChip.addEventListener('click', (event) => {
-        event.stopPropagation();
-        showDateMenu(event, ctx.app, task.due, {
-          onPick: (date) => void ctx.edits.reschedule(ref, date),
-          onClear: () => void ctx.edits.clearDate(ref),
-        });
-      });
-    }
+    renderDateChip(meta, ctx, task, '📅', task.due, 'due');
   }
   if (task.scheduled !== undefined) {
-    const late =
-      compareDayKeys(task.scheduled, todayKey()) < 0 &&
-      task.status !== 'done' &&
-      task.status !== 'cancelled';
-    const scheduledChip = meta.createSpan({
-      cls: `runway-chip runway-chip--scheduled${late ? ' runway-chip--overdue' : ''}`,
-      text: `⏳ ${task.scheduled}`,
-    });
-    if (task.status !== 'unknown') {
-      scheduledChip.setAttribute('aria-label', 'Rischedula (⏳)');
-      scheduledChip.addEventListener('click', (event) => {
-        event.stopPropagation();
-        showDateMenu(event, ctx.app, task.scheduled, {
-          onPick: (date) => void ctx.edits.reschedule(ref, date, '⏳'),
-          onClear: () => void ctx.edits.clearDate(ref, '⏳'),
-        });
-      });
-    }
+    renderDateChip(meta, ctx, task, '⏳', task.scheduled, 'scheduled');
   }
   if (options.showNote !== false) {
     const note = meta.createSpan({
