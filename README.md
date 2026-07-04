@@ -4,8 +4,19 @@ Task management for [Obsidian](https://obsidian.md): a sidebar glance and a filt
 
 ## Views
 
-- **Sidebar** — daily glance: *In ritardo* / *Oggi* / *Prossimi N giorni*, plus one-click quick-add.
-- **Task list** (workspace tab) — one flat list with on-the-fly filters (text, status, tag, folder, due preset), sorting (due / priority / note) and grouping (date / priority / tag / folder). Filter state persists per tab.
+Sidebar and full page are the **same component** at two densities — identical filtering, grouping, accordion and keyboard behavior.
+
+- **Sidebar** — a compact glance; defaults to date grouping with the far buckets collapsed.
+- **Task list** (workspace tab) — the full-density surface.
+
+Both offer: a compact filter bar (text search + status pills + menu-chips for due / tag / folder / priority / sort / group), **collapsible accordion groups** (per-group + collapse-all, state persisted), grouping by **note (Inbox pinned first)** / date / priority / tag / folder, and **saved views** (bookmark menu → apply or save a named filter+sort+group preset; managed from settings).
+
+## Interactions & keyboard
+
+Cursor navigation and multi-selection:
+
+- `j` / `k` move a cursor · `x` complete · `e` edit · `enter` / `o` open · `space` toggle selection · `esc` clear.
+- Multi-select via `space` or modifier/shift-click; a bulk bar offers **Complete / Reschedule / Move** on the whole selection.
 
 ## Task syntax
 
@@ -22,21 +33,27 @@ Standard Tasks-plugin emoji format:
 
 Unmanaged fields (`🔁` recurrence, `🛫`, `➕`, block IDs) are preserved verbatim and never edited.
 
-## Interactions
+## Editing
 
 Everything writes back to the source note through a guarded line edit — the write aborts if the line changed since it was indexed:
 
-- Check / uncheck (writes and removes `✅ date`)
-- Status transitions to in-progress and cancelled
-- Reschedule: Oggi / Domani / +1 settimana / date picker, with 10s undo
-- Priority and description edit
-- Quick-add to today's daily note (created from your daily template if missing) or any picked note
+- Check / uncheck (writes and removes `✅ date`), status transitions, reschedule (with 10s undo), priority and description edit.
+- **Move to note**: relocate a task line between notes (append-first, so a mid-flight failure can only duplicate — never lose — the task).
+- **Quick-add** to today's daily note (created from your daily template if missing) or any picked note. The `+` on a note group header adds straight into that note. Quick-add understands trailing **natural-language dates** — "chiama Marco domani", "review lunedì", "x tra 3 giorni" (IT + EN) — with a live preview.
+
+## Recurrence
+
+`🔁 every [N] day|week|month|year [when done]` is handled: completing a recurring task spawns the next occurrence above and marks the current one done. Richer rules (specific weekdays, "every weekday") are left to the Tasks plugin — Runway opens the file instead of guessing.
+
+## Status bar & commands
+
+- Status bar shows an **overdue counter**; click it to open the list filtered to overdue.
+- Commands: open list, open sidebar, quick-add, and **Oggi** (overdue + due-today).
+- **Agent / plugin API** at `app.plugins.plugins.runway.api`: `allTasks`, `query`, `overdue`, `today`, `createTask`, `completeTask`, `reschedule`, `setPriority`, `moveToNote`, `openForDay`. Sibling plugins (Horizon's "open the active day in Runway") and Exo drive tasks through it.
 
 ## Scope
 
-The whole vault is indexed except `.obsidian/` and the folders listed in **Settings → Cartelle escluse** (default: `.archive`). Tasks inside callouts and code blocks are not indexed (they are invisible to Obsidian's list-item cache).
-
-Recurrence (`🔁`) is out of scope: recurring tasks can only be completed from the file, and Runway opens it for you.
+The whole vault is indexed except `.obsidian/` and the folders listed in **Settings → Cartelle escluse** (default: `.archive`, `.claude`, `_system`, `Resources/Templates`). Tasks inside callouts and code blocks are not indexed (they are invisible to Obsidian's list-item cache).
 
 ## Development
 
