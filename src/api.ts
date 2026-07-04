@@ -1,5 +1,5 @@
 import { todayKey } from './dates.ts';
-import { DEFAULT_FILTER, queryTasks, sortTasks } from './core/query.ts';
+import { DEFAULT_FILTER, matchesTask, sortTasks } from './core/query.ts';
 import { PRIORITY_EMOJI } from './core/parse.ts';
 import type { TaskEditService, TaskRef } from './edits/task-edit.ts';
 import type { TaskIndexService } from './index/index-service.ts';
@@ -67,8 +67,9 @@ export function createRunwayApi(
 ): RunwayApi {
   const run = (filter: Partial<TaskFilter>): TaskDTO[] => {
     const merged: TaskFilter = { ...DEFAULT_FILTER, ...filter };
+    const today = todayKey();
     return sortTasks(
-      index.all().filter((task) => matches(task, merged)),
+      index.all().filter((task) => matchesTask(task, merged, today)),
       'due',
     ).map(toDTO);
   };
@@ -108,11 +109,4 @@ export function createRunwayApi(
       return openDay(day);
     },
   };
-}
-
-// Re-use the query engine's matcher without re-grouping.
-function matches(task: Task, filter: TaskFilter): boolean {
-  return queryTasks([task], filter, 'due', 'none', todayKey()).some(
-    (group) => group.tasks.length > 0,
-  );
 }

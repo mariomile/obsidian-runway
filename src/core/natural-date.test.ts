@@ -58,6 +58,11 @@ test('DD/MM rolls to next year when already past', () => {
   assert.equal(parseNaturalDate('trip 10/08', TODAY).date, '2026-08-10');
 });
 
+test('decimals and ranges mid-text are not misread as DD/MM dates', () => {
+  assert.equal(parseNaturalDate('bump versione a 2.1', TODAY).date, null);
+  assert.equal(parseNaturalDate('rivedi capitoli 3-4', TODAY).date, null);
+});
+
 test('no trailing date returns null and untouched text', () => {
   const result = parseNaturalDate('scrivi il post del blog', TODAY);
   assert.equal(result.date, null);
