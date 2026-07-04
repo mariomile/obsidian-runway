@@ -547,10 +547,13 @@ export class TaskPanel {
 
   private onKeyDown(event: KeyboardEvent): void {
     const target = event.target;
+    // Let interactive controls (inputs, buttons, chips, group headers) own
+    // their own keys — otherwise Enter/Space double-fire (e.g. a group header
+    // would both toggle collapse and open the cursor task).
     if (
-      target instanceof HTMLInputElement ||
-      target instanceof HTMLTextAreaElement ||
-      (target instanceof HTMLElement && target.isContentEditable)
+      target instanceof HTMLElement &&
+      (target.isContentEditable ||
+        target.closest('input, textarea, select, a, button, [role="button"]'))
     ) {
       return;
     }

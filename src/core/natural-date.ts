@@ -35,7 +35,9 @@ const WEEKDAYS: [RegExp, number][] = [
 const PATTERNS: [RegExp, (today: DayKey, match: RegExpExecArray) => DayKey | null][] = [
   [/(\d{4}-\d{2}-\d{2})$/, (_t, m) => (isValidDayKey(m[1] ?? '') ? (m[1] as DayKey) : null)],
   [
-    /(\d{1,2})[/.-](\d{1,2})$/,
+    // Slash-only shorthand: `.`/`-` collide with decimals ("v2.1") and ranges
+    // ("cap 3-4"); full hyphen dates are covered by the ISO pattern above.
+    /(?:^|\s)(\d{1,2})\/(\d{1,2})$/,
     (today, m) => {
       const day = Number(m[1]);
       const month = Number(m[2]);
