@@ -119,6 +119,31 @@ test('group by folder and by tag', () => {
   assert.equal(byTag[byTag.length - 1]?.label, 'No tag');
 });
 
+test('group by note pins Inbox first, then one bucket per note', () => {
+  const withCaptures = [
+    ...TASKS,
+    makeTask('- [ ] Cattura volante', '_inbox/Clip.md', 20),
+    makeTask('- [ ] Task da daily', 'Journal/Daily/02-07-2026.md', 21),
+  ];
+  const groups = queryTasks(withCaptures, DEFAULT_FILTER, 'due', 'note', TODAY, {
+    inboxFolders: ['_inbox', 'Journal/Daily'],
+  });
+  assert.equal(groups[0]?.label, 'Inbox');
+  // Both captures + the daily-note task already in TASKS land in Inbox.
+  assert.equal(groups[0]?.tasks.length, 3);
+  const rest = groups.slice(1);
+  assert.ok(rest.every((group) => group.key.startsWith('1-')));
+  assert.deepEqual(
+    rest.map((group) => group.label),
+    ['note', 'note', 'book'],
+  );
+});
+
+test('group by note without inbox folders has no Inbox bucket', () => {
+  const groups = queryTasks(TASKS, DEFAULT_FILTER, 'due', 'note', TODAY);
+  assert.ok(groups.every((group) => group.label !== 'Inbox'));
+});
+
 test('group none returns a single bucket with everything matched', () => {
   const groups = queryTasks(TASKS, DEFAULT_FILTER, 'due', 'none', TODAY);
   assert.equal(groups.length, 1);

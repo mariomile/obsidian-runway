@@ -2,22 +2,24 @@ import { boundedNumber } from './utils.ts';
 import type { RunwaySettings, TaskGroup, TaskSort } from './types.ts';
 
 export const DEFAULT_SETTINGS: RunwaySettings = {
-  excludeFolders: ['.archive'],
+  excludeFolders: ['.archive', '.claude', '_system', 'Resources/Templates'],
+  inboxFolders: ['_inbox', 'Journal/Daily'],
   sidebarUpcomingDays: 7,
   dailyFolder: 'Journal/Daily',
   dailyFormat: 'DD-MM-YYYY',
   quickAddHeading: '',
   defaultSort: 'due',
-  defaultGroup: 'date',
+  defaultGroup: 'note',
 };
 
 const SORTS: readonly TaskSort[] = ['due', 'priority', 'path'];
-const GROUPS: readonly TaskGroup[] = ['none', 'date', 'priority', 'tag', 'folder'];
+const GROUPS: readonly TaskGroup[] = ['none', 'note', 'date', 'priority', 'tag', 'folder'];
 
 export function parseSettings(data: unknown): RunwaySettings {
   if (!isRecord(data)) return structuredClone(DEFAULT_SETTINGS);
   return {
     excludeFolders: stringList(data.excludeFolders, DEFAULT_SETTINGS.excludeFolders),
+    inboxFolders: stringList(data.inboxFolders, DEFAULT_SETTINGS.inboxFolders),
     sidebarUpcomingDays: boundedNumber(
       data.sidebarUpcomingDays,
       DEFAULT_SETTINGS.sidebarUpcomingDays,

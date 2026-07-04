@@ -40,11 +40,12 @@ const SORT_OPTIONS: [TaskSort, string][] = [
 ];
 
 const GROUP_OPTIONS: [TaskGroup, string][] = [
-  ['none', 'Nessun gruppo'],
+  ['note', 'Per nota'],
   ['date', 'Per data'],
   ['priority', 'Per priorità'],
   ['tag', 'Per tag'],
   ['folder', 'Per cartella'],
+  ['none', 'Nessun gruppo'],
 ];
 
 /** Full-page flat list with on-the-fly filters, sorting and grouping. */
@@ -131,6 +132,7 @@ export class RunwayListView extends ItemView {
       this.sort,
       this.group,
       todayKey(),
+      { inboxFolders: this.ctx.settings.inboxFolders },
     );
     const total = groups.reduce((sum, group) => sum + group.tasks.length, 0);
     results.createDiv({ cls: 'runway-list__count', text: `${total} task` });
@@ -143,17 +145,31 @@ export class RunwayListView extends ItemView {
     const body = results.createDiv({ cls: 'runway-list__body' });
     for (const group of groups) {
       const sectionEl = body.createDiv({ cls: 'runway-section' });
+      const isInbox = this.group === 'note' && group.key === '0-inbox';
+      if (isInbox) sectionEl.addClass('runway-section--inbox');
       if (group.label !== '') {
         const head = sectionEl.createDiv({ cls: 'runway-section__head' });
-        head.createSpan({ cls: 'runway-section__title', text: group.label });
+        const title = head.createSpan({ cls: 'runway-section__title', text: group.label });
         head.createSpan({ cls: 'runway-section__count', text: String(group.tasks.length) });
+        const notePath = group.tasks[0]?.path;
+        if (this.group === 'note' && !isInbox && notePath !== undefined) {
+          title.addClass('runway-section__title--link');
+          title.setAttribute('aria-label', notePath);
+          title.addEventListener('click', () => {
+            const file = this.app.vault.getFileByPath(notePath);
+            if (file) void this.app.workspace.getLeaf('tab').openFile(file);
+          });
+        }
       }
       const list = sectionEl.createDiv({ cls: 'runway-section__list' });
       const visible = this.expanded.has(group.key)
         ? group.tasks
         : group.tasks.slice(0, PAGE_SIZE);
+      // Inside a note group the note chip is redundant — except in Inbox,
+      // where it says which daily/inbox note holds the capture.
+      const showNote = this.group !== 'note' || isInbox;
       for (const task of visible) {
-        renderTaskRow(list, this.ctx, task);
+        renderTaskRow(list, this.ctx, task, { showNote });
       }
       if (group.tasks.length > visible.length) {
         const more = sectionEl.createEl('button', {
