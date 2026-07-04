@@ -1,12 +1,16 @@
-import { Menu, setIcon } from 'obsidian';
+import { Menu, Notice, setIcon } from 'obsidian';
 
 import { todayKey } from '../dates.ts';
 import { DEFAULT_FILTER, queryTasks } from '../core/query.ts';
+import { PRIORITY_EMOJI } from '../core/parse.ts';
 import { renderTaskRow } from './task-row.ts';
 import { QuickAddModal } from './quick-add-modal.ts';
+import { promptText } from './prompt-modal.ts';
 import type { RunwayContext } from './context.ts';
 import type {
   DueFilter,
+  Priority,
+  SavedView,
   TaskFilter,
   TaskGroup,
   TaskSort,
@@ -51,6 +55,15 @@ const GROUP_OPTIONS: [TaskGroup, string][] = [
   ['tag', 'Tag'],
   ['folder', 'Cartella'],
   ['none', 'Niente'],
+];
+
+const PRIORITY_OPTIONS: [string, string][] = [
+  ['', 'Priorità'],
+  ['highest', `${PRIORITY_EMOJI.highest} Massima`],
+  ['high', `${PRIORITY_EMOJI.high} Alta`],
+  ['medium', `${PRIORITY_EMOJI.medium} Media`],
+  ['low', `${PRIORITY_EMOJI.low} Bassa`],
+  ['lowest', `${PRIORITY_EMOJI.lowest} Minima`],
 ];
 
 function shortLabel(options: readonly [string, string][], value: string): string {
@@ -171,6 +184,11 @@ export class TaskPanel {
       }, 150);
     });
 
+    const viewsBtn = actions.createEl('button', { cls: 'runway-iconbtn' });
+    setIcon(viewsBtn, 'bookmark');
+    viewsBtn.setAttribute('aria-label', 'Viste salvate');
+    viewsBtn.addEventListener('click', (event) => this.openViewsMenu(event));
+
     this.toggleAllBtn = actions.createEl('button', { cls: 'runway-iconbtn' });
     this.toggleAllBtn.addEventListener('click', () => this.toggleAll());
 
@@ -271,6 +289,18 @@ export class TaskPanel {
       onPick: (value) =>
         this.update(() => {
           this.state.filter.folder = value === '' ? null : value;
+        }),
+    });
+
+    const priority = this.state.filter.priorities?.[0] ?? '';
+    this.chip(controlRow, {
+      label: priority === '' ? 'Priorità' : (PRIORITY_EMOJI[priority as Priority] ?? 'Priorità'),
+      active: this.state.filter.priorities !== null,
+      options: PRIORITY_OPTIONS,
+      current: priority,
+      onPick: (value) =>
+        this.update(() => {
+          this.state.filter.priorities = value === '' ? null : [value as Priority];
         }),
     });
 
@@ -404,7 +434,15 @@ export class TaskPanel {
 
       const notePath = group.tasks[0]?.path;
       if (this.state.group === 'note' && !isInbox && notePath !== undefined) {
-        const open = head.createSpan({ cls: 'runway-group__open' });
+        const spacer = head.createDiv({ cls: 'runway-group__actions' });
+        const addHere = spacer.createSpan({ cls: 'runway-group__act' });
+        setIcon(addHere, 'plus');
+        addHere.setAttribute('aria-label', 'Nuovo task in questa nota');
+        addHere.addEventListener('click', (event) => {
+          event.stopPropagation();
+          new QuickAddModal(this.ctx, notePath).open();
+        });
+        const open = spacer.createSpan({ cls: 'runway-group__act' });
         setIcon(open, 'file-symlink');
         open.setAttribute('aria-label', 'Apri nota');
         open.addEventListener('click', (event) => {
@@ -466,6 +504,59 @@ export class TaskPanel {
     else this.collapsed.add(key);
     this.options.onStateChange();
     this.renderResults();
+  }
+
+  // ── Saved views ─────────────────────────────────────────────────────
+
+  private openViewsMenu(event: MouseEvent): void {
+    const menu = new Menu();
+    const views = this.ctx.settings.savedViews;
+    if (views.length === 0) {
+      menu.addItem((item) => item.setTitle('Nessuna vista salvata').setDisabled(true));
+    }
+    for (const view of views) {
+      menu.addItem((item) =>
+        item
+          .setTitle(view.name)
+          .setIcon('bookmark')
+          .onClick(() => this.applyView(view)),
+      );
+    }
+    menu.addSeparator();
+    menu.addItem((item) =>
+      item
+        .setTitle('Salva vista corrente…')
+        .setIcon('save')
+        .onClick(() => this.saveCurrentView()),
+    );
+    menu.showAtMouseEvent(event);
+  }
+
+  private applyView(view: SavedView): void {
+    this.state.filter = { ...structuredClone(DEFAULT_FILTER), ...view.filter };
+    this.state.sort = view.sort;
+    this.state.group = view.group;
+    this.expanded.clear();
+    this.collapsed.clear();
+    this.options.onStateChange();
+    this.renderFilters();
+    this.renderResults();
+  }
+
+  private saveCurrentView(): void {
+    promptText(this.ctx.app, 'Nome della vista', '', (name) => {
+      const view: SavedView = {
+        name,
+        filter: { ...this.state.filter },
+        sort: this.state.sort,
+        group: this.state.group,
+      };
+      const existing = this.ctx.settings.savedViews.findIndex((v) => v.name === name);
+      if (existing >= 0) this.ctx.settings.savedViews[existing] = view;
+      else this.ctx.settings.savedViews.push(view);
+      void this.ctx.saveSettings();
+      new Notice(`Runway: vista "${name}" salvata.`);
+    });
   }
 
   private toggleAll(): void {

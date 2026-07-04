@@ -81,11 +81,20 @@ export interface TaskGroupResult {
   tasks: Task[];
 }
 
+export interface SavedView {
+  name: string;
+  filter: TaskFilter;
+  sort: TaskSort;
+  group: TaskGroup;
+}
+
 export interface RunwaySettings {
   /** Folder path prefixes excluded from indexing (.obsidian is always excluded). */
   excludeFolders: string[];
   /** Folders whose tasks are "not yet filed" — pinned as Inbox in the note grouping. */
   inboxFolders: string[];
+  /** User-named filter/sort/group presets. */
+  savedViews: SavedView[];
   /** Days ahead shown in the sidebar Upcoming section. */
   sidebarUpcomingDays: number;
   /** Daily note folder for quick-add default target. */

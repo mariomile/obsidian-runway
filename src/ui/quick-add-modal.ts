@@ -16,9 +16,10 @@ export class QuickAddModal extends Modal {
   private priority: Priority | null = null;
   private targetPath: string | null = null;
 
-  constructor(ctx: RunwayContext) {
+  constructor(ctx: RunwayContext, initialTargetPath?: string) {
     super(ctx.app);
     this.ctx = ctx;
+    this.targetPath = initialTargetPath ?? null;
   }
 
   onOpen(): void {
@@ -77,7 +78,7 @@ export class QuickAddModal extends Modal {
     const targetRow = this.contentEl.createDiv({ cls: 'runway-quick-add__target' });
     const targetLabel = targetRow.createSpan({
       cls: 'runway-quick-add__target-path',
-      text: `→ ${dailyNotePath(this.ctx.settings, today)}`,
+      text: `→ ${this.targetPath ?? dailyNotePath(this.ctx.settings, today)}`,
     });
     const change = targetRow.createEl('button', { text: 'Cambia' });
     change.addEventListener('click', () => {
