@@ -1,4 +1,4 @@
-import { Plugin } from 'obsidian';
+import { Plugin, setIcon } from 'obsidian';
 import type { WorkspaceLeaf } from 'obsidian';
 
 import { createRunwayApi } from './api.ts';
@@ -56,8 +56,45 @@ export default class RunwayPlugin extends Plugin {
       name: 'Nuovo task (quick-add)',
       callback: () => new QuickAddModal(this.context()).open(),
     });
+    this.addCommand({
+      id: 'open-today',
+      name: 'Oggi (in ritardo + in scadenza)',
+      callback: () =>
+        void this.openListView({
+          filter: { ...structuredClone(DEFAULT_FILTER), due: 'today' },
+          group: 'date',
+        }),
+    });
 
+    this.setupStatusBar();
     this.addSettingTab(new RunwaySettingTab(this.app, this));
+  }
+
+  /** Overdue counter in the status bar; click opens the list filtered to overdue. */
+  private setupStatusBar(): void {
+    const item = this.addStatusBarItem();
+    item.addClass('mod-clickable');
+    item.addEventListener('click', () =>
+      void this.openListView({
+        filter: { ...structuredClone(DEFAULT_FILTER), due: 'overdue' },
+        group: 'note',
+      }),
+    );
+    const render = (): void => {
+      const count = this.index.isReady() ? this.api.overdue().length : 0;
+      item.empty();
+      if (count === 0) {
+        item.hide();
+        return;
+      }
+      item.show();
+      item.setAttribute('aria-label', `${count} task in ritardo`);
+      const icon = item.createSpan({ cls: 'runway-statusbar__icon' });
+      setIcon(icon, 'alarm-clock');
+      item.createSpan({ cls: 'runway-statusbar__count', text: ` ${count}` });
+    };
+    this.register(this.index.subscribe(render));
+    render();
   }
 
   context(): RunwayContext {
