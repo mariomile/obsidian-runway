@@ -4,6 +4,9 @@ import { todayKey } from '../dates.ts';
 import { DEFAULT_FILTER, queryTasks } from '../core/query.ts';
 import { PRIORITY_EMOJI } from '../core/parse.ts';
 import { renderTaskRow } from './task-row.ts';
+import { refOf } from './task-menu.ts';
+import { showDateMenu } from './date-menu.ts';
+import { pickNote } from './note-picker.ts';
 import { QuickAddModal } from './quick-add-modal.ts';
 import { promptText } from './prompt-modal.ts';
 import type { RunwayContext } from './context.ts';
@@ -11,11 +14,16 @@ import type {
   DueFilter,
   Priority,
   SavedView,
+  Task,
   TaskFilter,
   TaskGroup,
   TaskSort,
   TaskStatus,
 } from '../types.ts';
+
+function taskKey(task: Task): string {
+  return `${task.path}:${task.line}`;
+}
 
 const PAGE_SIZE = 200;
 
@@ -107,12 +115,21 @@ export class TaskPanel {
   private readonly expanded = new Set<string>();
 
   private filtersEl: HTMLElement | null = null;
+  private bulkBarEl: HTMLElement | null = null;
   private resultsEl: HTMLElement | null = null;
   private countEl: HTMLElement | null = null;
   private toggleAllBtn: HTMLElement | null = null;
   private unsubscribe: (() => void) | null = null;
   private searchTimer: ReturnType<typeof setTimeout> | null = null;
   private lastGroupKeys: string[] = [];
+
+  // Keyboard cursor + multi-selection over the currently-visible rows.
+  private cursor = -1;
+  private readonly selection = new Set<string>();
+  private visibleTasks: Task[] = [];
+  private rowEls: HTMLElement[] = [];
+  private taskByKey = new Map<string, Task>();
+  private keyHandler: ((event: KeyboardEvent) => void) | null = null;
 
   constructor(
     container: HTMLElement,
@@ -135,12 +152,17 @@ export class TaskPanel {
   mount(): void {
     this.container.addClass('runway-panel');
     this.container.toggleClass('runway-panel--compact', this.options.compact);
+    this.container.tabIndex = 0;
+    this.keyHandler = (event) => this.onKeyDown(event);
+    this.container.addEventListener('keydown', this.keyHandler);
     this.unsubscribe = this.ctx.index.subscribe(() => this.renderResults());
     this.renderChrome();
   }
 
   unmount(): void {
     if (this.searchTimer !== null) clearTimeout(this.searchTimer);
+    if (this.keyHandler) this.container.removeEventListener('keydown', this.keyHandler);
+    this.keyHandler = null;
     this.unsubscribe?.();
     this.unsubscribe = null;
   }
@@ -206,6 +228,7 @@ export class TaskPanel {
     add.addEventListener('click', () => new QuickAddModal(this.ctx).open());
 
     this.filtersEl = root.createDiv({ cls: 'runway-panel__filters' });
+    this.bulkBarEl = root.createDiv({ cls: 'runway-bulkbar is-hidden' });
     this.resultsEl = root.createDiv({ cls: 'runway-panel__results' });
 
     this.renderFilters();
@@ -383,6 +406,9 @@ export class TaskPanel {
     const results = this.resultsEl;
     if (!results) return;
     results.empty();
+    this.visibleTasks = [];
+    this.rowEls = [];
+    this.taskByKey = new Map();
 
     if (!this.ctx.index.isReady()) {
       results.createDiv({ cls: 'runway-empty', text: 'Indicizzazione…' });
@@ -397,12 +423,19 @@ export class TaskPanel {
       todayKey(),
       { inboxFolders: this.ctx.settings.inboxFolders },
     );
+    for (const group of groups) {
+      for (const task of group.tasks) this.taskByKey.set(taskKey(task), task);
+    }
     const total = groups.reduce((sum, group) => sum + group.tasks.length, 0);
     this.countEl?.setText(this.options.compact ? String(total) : `${total} task`);
     this.lastGroupKeys = groups.filter((group) => group.label !== '').map((group) => group.key);
     this.syncToggleAll();
+    // Drop selection entries whose tasks are gone (completed, edited away).
+    for (const key of [...this.selection]) if (!this.taskByKey.has(key)) this.selection.delete(key);
 
     if (total === 0) {
+      this.cursor = -1;
+      this.renderBulkBar();
       results.createDiv({ cls: 'runway-empty', text: 'Nessun task corrisponde ai filtri.' });
       return;
     }
@@ -465,17 +498,38 @@ export class TaskPanel {
         this.renderRows(body, group.key, group.tasks, showNote);
       }
     }
+
+    if (this.cursor >= this.visibleTasks.length) this.cursor = this.visibleTasks.length - 1;
+    this.renderBulkBar();
   }
 
-  private renderRows(
-    body: HTMLElement,
-    key: string,
-    tasks: readonly Parameters<typeof renderTaskRow>[2][],
-    showNote: boolean,
-  ): void {
+  private renderRows(body: HTMLElement, key: string, tasks: readonly Task[], showNote: boolean): void {
     const visible = this.expanded.has(key) ? tasks : tasks.slice(0, PAGE_SIZE);
     for (const task of visible) {
-      renderTaskRow(body, this.ctx, task, { showNote });
+      const index = this.visibleTasks.length;
+      const rowEl = renderTaskRow(body, this.ctx, task, {
+        showNote,
+        cursor: index === this.cursor,
+        selected: this.selection.has(taskKey(task)),
+      });
+      // Modifier-click selects without triggering the row's open/complete handlers.
+      rowEl.addEventListener(
+        'click',
+        (event) => {
+          if (event.metaKey || event.ctrlKey) {
+            event.preventDefault();
+            event.stopPropagation();
+            this.toggleSelect(task);
+          } else if (event.shiftKey) {
+            event.preventDefault();
+            event.stopPropagation();
+            this.selectRange(index);
+          }
+        },
+        { capture: true },
+      );
+      this.visibleTasks.push(task);
+      this.rowEls.push(rowEl);
     }
     if (tasks.length > visible.length) {
       const more = body.createEl('button', {
@@ -489,11 +543,179 @@ export class TaskPanel {
     }
   }
 
+  // ── Keyboard cursor + multi-selection ───────────────────────────────
+
+  private onKeyDown(event: KeyboardEvent): void {
+    const target = event.target;
+    if (
+      target instanceof HTMLInputElement ||
+      target instanceof HTMLTextAreaElement ||
+      (target instanceof HTMLElement && target.isContentEditable)
+    ) {
+      return;
+    }
+    switch (event.key) {
+      case 'j':
+      case 'ArrowDown':
+        this.moveCursor(1);
+        break;
+      case 'k':
+      case 'ArrowUp':
+        this.moveCursor(-1);
+        break;
+      case 'x':
+        void this.completeTargets();
+        break;
+      case 'e':
+        this.editCursor();
+        break;
+      case 'Enter':
+      case 'o':
+        this.openCursor();
+        break;
+      case ' ':
+        this.toggleCursorSelection();
+        break;
+      case 'Escape':
+        if (this.selection.size === 0) return;
+        this.clearSelection();
+        break;
+      default:
+        return;
+    }
+    event.preventDefault();
+  }
+
+  private moveCursor(delta: number): void {
+    if (this.visibleTasks.length === 0) return;
+    const prev = this.cursor;
+    this.cursor =
+      prev < 0
+        ? delta > 0
+          ? 0
+          : this.visibleTasks.length - 1
+        : Math.max(0, Math.min(this.visibleTasks.length - 1, prev + delta));
+    if (prev >= 0) this.rowEls[prev]?.removeClass('is-cursor');
+    const el = this.rowEls[this.cursor];
+    el?.addClass('is-cursor');
+    el?.scrollIntoView({ block: 'nearest' });
+  }
+
+  private cursorTask(): Task | null {
+    return this.cursor >= 0 ? (this.visibleTasks[this.cursor] ?? null) : null;
+  }
+
+  private toggleSelect(task: Task): void {
+    const key = taskKey(task);
+    if (this.selection.has(key)) this.selection.delete(key);
+    else this.selection.add(key);
+    const index = this.visibleTasks.findIndex((candidate) => taskKey(candidate) === key);
+    if (index >= 0) this.rowEls[index]?.toggleClass('is-selected', this.selection.has(key));
+    this.renderBulkBar();
+  }
+
+  private toggleCursorSelection(): void {
+    const task = this.cursorTask();
+    if (task) this.toggleSelect(task);
+  }
+
+  private selectRange(toIndex: number): void {
+    const from = this.cursor < 0 ? toIndex : this.cursor;
+    const [lo, hi] = from <= toIndex ? [from, toIndex] : [toIndex, from];
+    for (let i = lo; i <= hi; i++) {
+      const task = this.visibleTasks[i];
+      if (!task) continue;
+      this.selection.add(taskKey(task));
+      this.rowEls[i]?.addClass('is-selected');
+    }
+    this.cursor = toIndex;
+    this.renderBulkBar();
+  }
+
+  private clearSelection(): void {
+    this.selection.clear();
+    for (const el of this.rowEls) el.removeClass('is-selected');
+    this.renderBulkBar();
+  }
+
+  /** Refs for the current bulk target: the selection, else the cursor row. */
+  private targets(): Task[] {
+    if (this.selection.size > 0) {
+      return [...this.selection].map((key) => this.taskByKey.get(key)).filter((t): t is Task => !!t);
+    }
+    const task = this.cursorTask();
+    return task ? [task] : [];
+  }
+
+  private async completeTargets(): Promise<void> {
+    const targets = this.targets();
+    for (const task of targets) await this.ctx.edits.setStatus(refOf(task), 'done');
+    this.clearSelection();
+  }
+
+  private editCursor(): void {
+    const task = this.cursorTask();
+    if (!task) return;
+    promptText(this.ctx.app, 'Modifica task', task.description, (text) => {
+      void this.ctx.edits.editDescription(refOf(task), text);
+    });
+  }
+
+  private openCursor(): void {
+    const task = this.cursorTask();
+    if (task) void this.ctx.edits.openAtLine(refOf(task));
+  }
+
+  private renderBulkBar(): void {
+    const bar = this.bulkBarEl;
+    if (!bar) return;
+    bar.empty();
+    bar.toggleClass('is-hidden', this.selection.size === 0);
+    if (this.selection.size === 0) return;
+
+    bar.createSpan({ cls: 'runway-bulkbar__count', text: `${this.selection.size} selezionati` });
+    const actions = bar.createDiv({ cls: 'runway-bulkbar__actions' });
+
+    const complete = actions.createEl('button', { cls: 'runway-pill', text: 'Completa' });
+    complete.addEventListener('click', () => void this.completeTargets());
+
+    const reschedule = actions.createEl('button', { cls: 'runway-pill', text: 'Rischedula' });
+    reschedule.addEventListener('click', (event) => {
+      const targets = this.targets();
+      showDateMenu(event, this.ctx.app, undefined, {
+        onPick: (date) => {
+          void (async () => {
+            for (const task of targets) await this.ctx.edits.reschedule(refOf(task), date);
+            this.clearSelection();
+          })();
+        },
+      });
+    });
+
+    const move = actions.createEl('button', { cls: 'runway-pill', text: 'Sposta' });
+    move.addEventListener('click', () => {
+      const targets = this.targets();
+      pickNote(this.ctx.app, 'Sposta i task in…', (file) => {
+        void (async () => {
+          for (const task of targets) await this.ctx.edits.moveToNote(refOf(task), file.path);
+          this.clearSelection();
+        })();
+      });
+    });
+
+    const clear = actions.createEl('button', { cls: 'runway-iconbtn' });
+    setIcon(clear, 'x');
+    clear.setAttribute('aria-label', 'Deseleziona');
+    clear.addEventListener('click', () => this.clearSelection());
+  }
+
   // ── State transitions ───────────────────────────────────────────────
 
   private update(mutate: () => void): void {
     mutate();
     this.expanded.clear();
+    this.selection.clear();
+    this.cursor = -1;
     this.options.onStateChange();
     this.renderFilters();
     this.renderResults();
@@ -538,6 +760,8 @@ export class TaskPanel {
     this.state.group = view.group;
     this.expanded.clear();
     this.collapsed.clear();
+    this.selection.clear();
+    this.cursor = -1;
     this.options.onStateChange();
     this.renderFilters();
     this.renderResults();
