@@ -109,6 +109,7 @@ export class RunwaySettingTab extends PluginSettingTab {
       .addDropdown((dropdown) =>
         dropdown
           .addOptions({
+            note: 'Per nota',
             none: 'Nessuno',
             date: 'Per data',
             priority: 'Per priorità',
@@ -121,5 +122,23 @@ export class RunwaySettingTab extends PluginSettingTab {
             await this.plugin.saveSettings();
           }),
       );
+
+    if (this.plugin.settings.savedViews.length > 0) {
+      new Setting(containerEl).setName('Viste salvate').setHeading();
+      for (const view of this.plugin.settings.savedViews) {
+        new Setting(containerEl).setName(view.name).addExtraButton((button) =>
+          button
+            .setIcon('trash')
+            .setTooltip('Elimina vista')
+            .onClick(async () => {
+              this.plugin.settings.savedViews = this.plugin.settings.savedViews.filter(
+                (candidate) => candidate.name !== view.name,
+              );
+              await this.plugin.saveSettings();
+              this.display();
+            }),
+        );
+      }
+    }
   }
 }

@@ -1,9 +1,11 @@
+import { DEFAULT_FILTER } from './core/query.ts';
 import { boundedNumber } from './utils.ts';
-import type { RunwaySettings, TaskGroup, TaskSort } from './types.ts';
+import type { RunwaySettings, SavedView, TaskFilter, TaskGroup, TaskSort } from './types.ts';
 
 export const DEFAULT_SETTINGS: RunwaySettings = {
   excludeFolders: ['.archive', '.claude', '_system', 'Resources/Templates'],
   inboxFolders: ['_inbox', 'Journal/Daily'],
+  savedViews: [],
   sidebarUpcomingDays: 7,
   dailyFolder: 'Journal/Daily',
   dailyFormat: 'DD-MM-YYYY',
@@ -15,11 +17,27 @@ export const DEFAULT_SETTINGS: RunwaySettings = {
 const SORTS: readonly TaskSort[] = ['due', 'priority', 'path'];
 const GROUPS: readonly TaskGroup[] = ['none', 'note', 'date', 'priority', 'tag', 'folder'];
 
+function parseSavedViews(value: unknown): SavedView[] {
+  if (!Array.isArray(value)) return [];
+  const views: SavedView[] = [];
+  for (const entry of value) {
+    if (!isRecord(entry) || typeof entry.name !== 'string' || entry.name === '') continue;
+    views.push({
+      name: entry.name,
+      filter: { ...structuredClone(DEFAULT_FILTER), ...(isRecord(entry.filter) ? (entry.filter as Partial<TaskFilter>) : {}) },
+      sort: oneOf(entry.sort, SORTS, DEFAULT_SETTINGS.defaultSort),
+      group: oneOf(entry.group, GROUPS, DEFAULT_SETTINGS.defaultGroup),
+    });
+  }
+  return views;
+}
+
 export function parseSettings(data: unknown): RunwaySettings {
   if (!isRecord(data)) return structuredClone(DEFAULT_SETTINGS);
   return {
     excludeFolders: stringList(data.excludeFolders, DEFAULT_SETTINGS.excludeFolders),
     inboxFolders: stringList(data.inboxFolders, DEFAULT_SETTINGS.inboxFolders),
+    savedViews: parseSavedViews(data.savedViews),
     sidebarUpcomingDays: boundedNumber(
       data.sidebarUpcomingDays,
       DEFAULT_SETTINGS.sidebarUpcomingDays,
