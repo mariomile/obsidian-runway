@@ -65,6 +65,8 @@ export interface TaskFilter {
   /** Path prefix ('' or null = all). */
   folder: string | null;
   due: DueFilter;
+  /** Exact effective-date match (deep-link / Horizon cross-link). Overrides `due`. */
+  exactDay?: DayKey | null;
   /** null = all priorities. */
   priorities: Priority[] | null;
 }

@@ -1,6 +1,8 @@
 import { Plugin } from 'obsidian';
 import type { WorkspaceLeaf } from 'obsidian';
 
+import { createRunwayApi } from './api.ts';
+import { DEFAULT_FILTER } from './core/query.ts';
 import { TaskEditService } from './edits/task-edit.ts';
 import { TaskIndexService } from './index/index-service.ts';
 import { DEFAULT_SETTINGS, isExcludedPath, parseSettings } from './settings.ts';
@@ -8,11 +10,15 @@ import { RunwaySettingTab } from './settings-tab.ts';
 import { QuickAddModal } from './ui/quick-add-modal.ts';
 import { RunwayListView, VIEW_TYPE_LIST } from './ui/list-view.ts';
 import { RunwaySidebarView, VIEW_TYPE_SIDEBAR } from './ui/sidebar-view.ts';
+import type { RunwayApi } from './api.ts';
 import type { RunwayContext } from './ui/context.ts';
-import type { RunwaySettings } from './types.ts';
+import type { TaskPanelState } from './ui/task-panel.ts';
+import type { DayKey, RunwaySettings } from './types.ts';
 
 export default class RunwayPlugin extends Plugin {
   settings: RunwaySettings = structuredClone(DEFAULT_SETTINGS);
+  /** Programmatic surface for agents (Exo) and sibling plugins. */
+  api!: RunwayApi;
   private index!: TaskIndexService;
   private edits!: TaskEditService;
 
@@ -25,6 +31,7 @@ export default class RunwayPlugin extends Plugin {
     );
     this.edits = new TaskEditService(this.app, () => this.settings);
     this.index.start(this);
+    this.api = createRunwayApi(this.index, this.edits, (day) => this.openForDay(day));
 
     const ctx = this.context();
     this.registerView(VIEW_TYPE_SIDEBAR, (leaf) => new RunwaySidebarView(leaf, ctx));
@@ -73,15 +80,19 @@ export default class RunwayPlugin extends Plugin {
     await this.index.rescan((path) => isExcludedPath(path, this.settings.excludeFolders));
   }
 
-  async openListView(): Promise<void> {
+  async openListView(state?: Partial<TaskPanelState>): Promise<void> {
     const existing = this.app.workspace.getLeavesOfType(VIEW_TYPE_LIST)[0];
-    if (existing) {
-      await this.app.workspace.revealLeaf(existing);
-      return;
-    }
-    const leaf = this.app.workspace.getLeaf('tab');
-    await leaf.setViewState({ type: VIEW_TYPE_LIST, active: true });
+    const leaf = existing ?? this.app.workspace.getLeaf('tab');
+    await leaf.setViewState({ type: VIEW_TYPE_LIST, active: true, state: state ?? {} });
     await this.app.workspace.revealLeaf(leaf);
+  }
+
+  /** Open the full list focused on a single day (Horizon cross-link / agent). */
+  async openForDay(day: DayKey): Promise<void> {
+    await this.openListView({
+      filter: { ...structuredClone(DEFAULT_FILTER), exactDay: day },
+      group: 'none',
+    });
   }
 
   async openSidebarView(): Promise<void> {

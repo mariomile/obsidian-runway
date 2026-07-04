@@ -201,6 +201,22 @@ export class TaskPanel {
     if (!bar) return;
     bar.empty();
 
+    if (this.state.filter.exactDay) {
+      const dayRow = bar.createDiv({ cls: 'runway-filterbar__row' });
+      const pill = dayRow.createEl('button', {
+        cls: 'runway-fchip is-active',
+        attr: { 'aria-label': 'Rimuovi filtro giorno' },
+      });
+      pill.createSpan({ cls: 'runway-fchip__label', text: `📅 ${this.state.filter.exactDay}` });
+      const clear = pill.createSpan({ cls: 'runway-fchip__caret' });
+      setIcon(clear, 'x');
+      pill.addEventListener('click', () =>
+        this.update(() => {
+          this.state.filter.exactDay = null;
+        }),
+      );
+    }
+
     const statusRow = bar.createDiv({ cls: 'runway-filterbar__row' });
     for (const [status, label] of STATUS_PILLS) {
       const active = this.state.filter.statuses.includes(status);

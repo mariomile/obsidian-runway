@@ -1,8 +1,9 @@
 import { Notice } from 'obsidian';
 import type { App, TFile } from 'obsidian';
 
-import { applyLineEdit } from '../core/line-edit.ts';
+import { applyLineEdit, removeLine } from '../core/line-edit.ts';
 import { parseTaskLine } from '../core/parse.ts';
+import { completeRecurring } from '../core/recurrence.ts';
 import {
   removeDateField,
   rewriteDate,
@@ -49,9 +50,19 @@ export class TaskEditService {
     const parsed = parseTaskLine(ref.rawText);
     if (!parsed || parsed.status === 'unknown') return false;
     if (target === 'done' && ref.rawText.includes('🔁')) {
-      new Notice('Runway: i task ricorrenti si completano dal file — te lo apro.');
-      await this.openAtLine(ref);
-      return false;
+      const result = completeRecurring(ref.rawText, todayKey());
+      if (result === null) {
+        // Unsupported rule or no date to advance: don't risk the series.
+        new Notice('Runway: ricorrenza non gestita — apro il file.');
+        await this.openAtLine(ref);
+        return false;
+      }
+      const changed = await this.editLine(
+        ref,
+        () => `${result.nextLine}\n${result.completedLine}`,
+      );
+      if (changed) new Notice('Runway: completato, prossima occorrenza creata.');
+      return changed;
     }
     return this.editLine(ref, (line) => transitionStatus(line, target, todayKey()));
   }
@@ -102,6 +113,41 @@ export class TaskEditService {
       appendTaskLine(content, taskLine, settings.quickAddHeading),
     );
     return path;
+  }
+
+  /**
+   * Move a task line out of its note and into `targetPath` (created if
+   * missing). Appends to the target first, then removes from the source, so a
+   * mid-flight failure can at worst duplicate — never lose — the task.
+   */
+  async moveToNote(ref: TaskRef, targetPath: string): Promise<boolean> {
+    if (targetPath === ref.path) return false;
+    const source = this.app.vault.getFileByPath(ref.path);
+    if (!source) {
+      new Notice('Runway: file di origine non trovato.');
+      return false;
+    }
+    const target = await this.ensureFile(targetPath, todayKey());
+    if (!target) {
+      new Notice(`Runway: impossibile creare "${targetPath}".`);
+      return false;
+    }
+    const movedLine = ref.rawText.replace(/^\s+/, '');
+    await this.app.vault.process(target, (content) =>
+      appendTaskLine(content, movedLine, this.getSettings().quickAddHeading),
+    );
+    let removed = false;
+    await this.app.vault.process(source, (content) => {
+      const result = removeLine(content, ref);
+      removed = result.removed;
+      return result.content;
+    });
+    new Notice(
+      removed
+        ? `Runway: task spostato in ${targetPath}.`
+        : 'Runway: copiato, ma la riga di origine è cambiata — controlla i duplicati.',
+    );
+    return removed;
   }
 
   private async ensureFile(path: string, today: DayKey): Promise<TFile | null> {
