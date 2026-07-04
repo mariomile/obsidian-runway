@@ -58,6 +58,7 @@ export class RunwayListView extends ItemView {
   /** Groups the user expanded past PAGE_SIZE; reset when the query changes. */
   private readonly expanded = new Set<string>();
   private resultsEl: HTMLElement | null = null;
+  private countEl: HTMLElement | null = null;
 
   constructor(leaf: WorkspaceLeaf, ctx: RunwayContext) {
     super(leaf);
@@ -135,7 +136,7 @@ export class RunwayListView extends ItemView {
       { inboxFolders: this.ctx.settings.inboxFolders },
     );
     const total = groups.reduce((sum, group) => sum + group.tasks.length, 0);
-    results.createDiv({ cls: 'runway-list__count', text: `${total} task` });
+    this.countEl?.setText(`${total} task`);
 
     if (total === 0) {
       results.createDiv({ cls: 'runway-empty', text: 'Nessun task corrisponde ai filtri.' });
@@ -203,11 +204,17 @@ export class RunwayListView extends ItemView {
   }
 
   private renderToolbar(root: HTMLElement): void {
-    const toolbar = root.createDiv({ cls: 'runway-toolbar' });
+    const header = root.createDiv({ cls: 'runway-page__header' });
+    const titleGroup = header.createDiv({ cls: 'runway-page__titlegroup' });
+    titleGroup.createEl('h2', { cls: 'runway-page__title', text: 'Tasks' });
+    this.countEl = titleGroup.createSpan({ cls: 'runway-page__count', text: '' });
 
-    const searchRow = toolbar.createDiv({ cls: 'runway-toolbar__row' });
-    const search = searchRow.createEl('input', {
-      cls: 'runway-toolbar__search',
+    const actions = header.createDiv({ cls: 'runway-page__actions' });
+    const searchWrap = actions.createDiv({ cls: 'runway-search' });
+    const searchIcon = searchWrap.createSpan({ cls: 'runway-search__icon' });
+    setIcon(searchIcon, 'search');
+    const search = searchWrap.createEl('input', {
+      cls: 'runway-search__input',
       type: 'search',
       placeholder: 'Cerca nei task…',
       value: this.filter.text,
@@ -221,11 +228,13 @@ export class RunwayListView extends ItemView {
         });
       }, 150);
     });
-    const add = searchRow.createEl('button', { cls: 'clickable-icon runway-toolbar__add' });
+    const add = actions.createEl('button', { cls: 'runway-add-btn' });
     setIcon(add, 'plus');
+    add.createSpan({ text: 'Task' });
     add.setAttribute('aria-label', 'Nuovo task');
     add.addEventListener('click', () => new QuickAddModal(this.ctx).open());
 
+    const toolbar = root.createDiv({ cls: 'runway-toolbar' });
     const pillsRow = toolbar.createDiv({ cls: 'runway-toolbar__row' });
     for (const [status, label] of STATUS_PILLS) {
       const active = this.filter.statuses.includes(status);

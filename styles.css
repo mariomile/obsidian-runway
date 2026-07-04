@@ -1,95 +1,103 @@
-/* Runway — task management for Obsidian */
+/* Runway — task management for Obsidian.
+   Theme-agnostic: built entirely on Obsidian's native CSS variables, like the
+   rest of the suite (exo / masonry / horizon / superbasetags).
+   Semantic task colors follow the horizon convention:
+   due = orange · overdue = red · scheduled = cyan · done = green. */
 
-/* ── Shared: sections & rows ─────────────────────────────────────────── */
-
-.runway-section {
-  margin-bottom: var(--size-4-4);
+.runway-list,
+.runway-sidebar {
+  --runway-t: 80ms ease;
+  --runway-t-surface: 140ms cubic-bezier(0.25, 1, 0.5, 1);
 }
 
-.runway-section__head {
-  display: flex;
-  align-items: baseline;
-  gap: var(--size-2-2);
-  padding: var(--size-2-1) 0;
-  border-bottom: 1px solid var(--background-modifier-border);
-  margin-bottom: var(--size-2-2);
-}
-
-.runway-section__title {
-  font-size: var(--font-ui-small);
-  font-weight: var(--font-semibold);
-  color: var(--text-normal);
-}
-
-.runway-section--overdue .runway-section__title {
-  color: var(--text-error);
-}
-
-.runway-section--today .runway-section__title {
-  color: var(--text-accent);
-}
-
-.runway-section__title--link {
-  cursor: var(--cursor);
-}
-
-.runway-section__title--link:hover {
-  color: var(--text-accent);
-  text-decoration: underline;
-}
-
-.runway-section--inbox .runway-section__title {
-  color: var(--text-accent);
-}
-
-.runway-section__count {
-  font-size: var(--font-ui-smaller);
-  color: var(--text-faint);
-  font-variant-numeric: tabular-nums;
-}
-
-.runway-section__more {
-  margin-top: var(--size-2-2);
-  font-size: var(--font-ui-smaller);
-}
-
-.runway-row {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--size-2-2);
-  padding: var(--size-2-1) var(--size-2-2);
+.runway-list :focus-visible,
+.runway-sidebar :focus-visible {
+  outline: 2px solid var(--interactive-accent);
+  outline-offset: 2px;
   border-radius: var(--radius-s);
 }
 
-.runway-row:hover {
-  background-color: var(--background-modifier-hover);
-}
+/* ── Custom checkbox (horizon chip__check DNA) ───────────────────────── */
 
 .runway-row__check {
   flex-shrink: 0;
   display: flex;
   align-items: center;
-  padding-top: 2px;
-  color: var(--text-muted);
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  margin-top: 1px;
   cursor: var(--cursor);
 }
 
-.runway-row__check:hover {
-  color: var(--text-accent);
+.runway-check {
+  --runway-check-color: var(--text-faint);
+  position: relative;
+  width: 13px;
+  height: 13px;
+  border-radius: 3px;
+  border: 1.5px solid var(--runway-check-color);
+  transition: background-color var(--runway-t), border-color var(--runway-t);
 }
 
-.runway-row[data-status='done'] .runway-row__check,
-.runway-row[data-status='cancelled'] .runway-row__check {
-  color: var(--text-faint);
+.runway-row__check:hover .runway-check {
+  --runway-check-color: var(--interactive-accent);
 }
 
-.runway-row[data-status='in-progress'] .runway-row__check {
-  color: var(--color-cyan);
+.runway-check--in-progress {
+  --runway-check-color: var(--color-cyan);
 }
 
-.runway-row__check svg {
-  width: var(--icon-s);
-  height: var(--icon-s);
+.runway-check--in-progress::after {
+  content: '';
+  position: absolute;
+  inset: 2.5px;
+  border-radius: 1.5px;
+  background-color: var(--color-cyan);
+}
+
+.runway-check--done {
+  --runway-check-color: var(--color-green);
+  background-color: var(--color-green);
+}
+
+.runway-check--done::after {
+  content: '';
+  position: absolute;
+  inset: 1px 2px 3px 2px;
+  border: solid var(--background-primary);
+  border-width: 0 1.5px 1.5px 0;
+  transform: rotate(45deg) scale(0.8);
+}
+
+.runway-check--cancelled {
+  background-image: linear-gradient(
+    135deg,
+    transparent 44%,
+    var(--text-faint) 44%,
+    var(--text-faint) 56%,
+    transparent 56%
+  );
+}
+
+.runway-check--unknown {
+  border-style: dashed;
+  cursor: default;
+}
+
+/* ── Rows ────────────────────────────────────────────────────────────── */
+
+.runway-row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--size-2-2);
+  padding: 5px var(--size-2-2);
+  border-radius: var(--radius-s);
+  transition: background-color var(--runway-t);
+}
+
+.runway-row:hover {
+  background-color: var(--background-modifier-hover);
 }
 
 .runway-row__main {
@@ -99,6 +107,7 @@
 
 .runway-row__desc {
   font-size: var(--font-ui-small);
+  line-height: 1.45;
   color: var(--text-normal);
   cursor: var(--cursor);
   overflow-wrap: anywhere;
@@ -114,24 +123,32 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--size-2-1);
+  gap: var(--size-2-3);
   margin-top: 1px;
 }
 
 .runway-row__more {
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: var(--radius-s);
   color: var(--text-faint);
   cursor: var(--cursor);
   opacity: 0;
-  padding-top: 2px;
+  transition: opacity var(--runway-t), color var(--runway-t);
 }
 
-.runway-row:hover .runway-row__more {
+.runway-row:hover .runway-row__more,
+.runway-row__more:focus-visible {
   opacity: 1;
 }
 
 .runway-row__more:hover {
   color: var(--text-normal);
+  background-color: var(--background-modifier-hover);
 }
 
 .runway-row__more svg {
@@ -139,129 +156,371 @@
   height: var(--icon-s);
 }
 
+/* ── Chips: 5px semantic dot + label, no filled background ───────────── */
+
 .runway-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--size-2-1);
   font-size: var(--font-ui-smaller);
   color: var(--text-muted);
-  background-color: var(--background-secondary);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.runway-chip__dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background-color: var(--text-faint);
+}
+
+.runway-chip--due,
+.runway-chip--scheduled {
+  cursor: var(--cursor);
   border-radius: var(--radius-s);
   padding: 0 var(--size-2-1);
-  line-height: 1.6;
-  white-space: nowrap;
+  margin-inline: calc(var(--size-2-1) * -1);
+  transition: background-color var(--runway-t), color var(--runway-t);
 }
 
-.runway-chip--due {
-  cursor: var(--cursor);
-}
-
-.runway-chip--due:hover {
+.runway-chip--due:hover,
+.runway-chip--scheduled:hover {
   background-color: var(--background-modifier-hover);
   color: var(--text-normal);
 }
 
-.runway-chip--overdue {
-  color: var(--text-error);
-  background-color: rgba(var(--color-red-rgb), 0.1);
+.runway-chip--due .runway-chip__dot {
+  background-color: var(--color-orange);
+}
+
+.runway-chip--scheduled .runway-chip__dot {
+  background-color: var(--color-cyan);
+}
+
+.runway-chip--overdue .runway-chip__dot {
+  background-color: var(--color-red);
+}
+
+.runway-chip--overdue .runway-chip__label {
+  color: var(--color-red);
 }
 
 .runway-chip--priority {
-  background: none;
-  padding: 0;
+  font-size: 0.8em;
 }
 
 .runway-chip--note {
   color: var(--text-faint);
-  background: none;
   cursor: var(--cursor);
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 18em;
+  transition: color var(--runway-t);
 }
 
 .runway-chip--note:hover {
   color: var(--text-accent);
 }
 
+/* ── Sections ────────────────────────────────────────────────────────── */
+
+.runway-section + .runway-section {
+  margin-top: var(--size-4-6);
+}
+
+.runway-section__head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--size-2-2);
+  margin-bottom: var(--size-2-3);
+}
+
+.runway-section__title {
+  font-size: var(--font-ui-medium);
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.runway-section__title--link {
+  cursor: var(--cursor);
+  transition: color var(--runway-t);
+}
+
+.runway-section__title--link:hover {
+  color: var(--text-accent);
+}
+
+.runway-section--inbox .runway-section__title {
+  color: var(--text-accent);
+}
+
+.runway-section__count {
+  font-size: var(--font-ui-smaller);
+  color: var(--text-faint);
+  font-variant-numeric: tabular-nums;
+}
+
+.runway-section__more {
+  margin-top: var(--size-2-2);
+  font-size: var(--font-ui-smaller);
+  color: var(--text-muted);
+  background-color: transparent;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-s);
+  box-shadow: none;
+  cursor: var(--cursor);
+  transition: background-color var(--runway-t);
+}
+
+.runway-section__more:hover {
+  background-color: var(--background-modifier-hover);
+}
+
 .runway-empty {
   color: var(--text-faint);
   font-size: var(--font-ui-small);
-  padding: var(--size-4-4);
+  padding: var(--size-4-6) var(--size-4-2);
   text-align: center;
 }
 
-/* ── Sidebar view ────────────────────────────────────────────────────── */
+/* ── Sidebar view (superbasetags panel DNA) ──────────────────────────── */
 
 .runway-sidebar {
-  padding: 0 var(--size-4-2) var(--size-4-4);
+  padding: 6px 8px 12px;
 }
 
 .runway-sidebar__header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--size-2-2) 0 var(--size-2-3);
+  gap: 6px;
+  padding: 2px 6px 6px;
 }
 
 .runway-sidebar__title {
-  font-size: var(--font-ui-medium);
+  font-size: var(--font-ui-smaller);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
   font-weight: var(--font-semibold);
+  color: var(--text-faint);
 }
 
 .runway-sidebar__actions {
   display: flex;
-  gap: var(--size-2-1);
+  gap: 2px;
 }
 
-/* ── List view ───────────────────────────────────────────────────────── */
+.runway-iconbtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-s);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: var(--cursor);
+  box-shadow: none;
+  transition: background-color var(--runway-t), color var(--runway-t);
+}
+
+.runway-iconbtn:hover {
+  background: var(--background-modifier-hover);
+  color: var(--text-normal);
+}
+
+.runway-iconbtn .svg-icon {
+  width: 16px;
+  height: 16px;
+}
+
+.runway-sidebar .runway-section + .runway-section {
+  margin-top: var(--size-4-3);
+}
+
+.runway-sidebar .runway-section__head {
+  padding: 10px 8px 4px;
+  margin-bottom: 0;
+}
+
+.runway-sidebar .runway-section__title {
+  font-size: var(--font-ui-smaller);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-weight: var(--font-semibold);
+  color: var(--text-faint);
+}
+
+.runway-sidebar .runway-section--overdue .runway-section__title {
+  color: var(--color-red);
+}
+
+.runway-sidebar .runway-section--today .runway-section__title {
+  color: var(--text-accent);
+}
+
+/* ── List view: page header (masonry DNA) ────────────────────────────── */
 
 .runway-list {
-  padding: var(--size-4-3) var(--size-4-6);
-  max-width: var(--file-line-width, 44em);
+  padding: var(--size-4-4) clamp(16px, 2.2vw, 32px) var(--size-4-8);
+  max-width: var(--file-line-width, 46em);
   margin: 0 auto;
 }
+
+.runway-page__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--size-4-6);
+  padding-bottom: var(--size-4-3);
+  margin-bottom: var(--size-4-2);
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.runway-page__titlegroup {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex: 0 0 auto;
+}
+
+.runway-page__title {
+  margin: 0;
+  font-family: var(--font-interface);
+  font-size: clamp(1.25rem, 1.05rem + 0.8vw, 1.8rem);
+  font-weight: 700;
+  letter-spacing: -0.035em;
+  line-height: 1.15;
+  color: var(--text-normal);
+}
+
+.runway-page__count {
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.runway-page__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.runway-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-width: min(240px, 40vw);
+}
+
+.runway-search__icon {
+  position: absolute;
+  z-index: 1;
+  left: 10px;
+  display: inline-flex;
+  width: 16px;
+  height: 16px;
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+.runway-search__icon .svg-icon {
+  width: 16px;
+  height: 16px;
+}
+
+.runway-list .runway-search__input {
+  width: 100%;
+  min-height: 36px;
+  padding-inline: 32px 10px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-m);
+  background: var(--background-secondary);
+  box-shadow: none;
+  font-size: var(--font-ui-small);
+}
+
+.runway-add-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 36px;
+  padding: 0 12px;
+  border-radius: var(--radius-m);
+  background-color: var(--interactive-accent);
+  color: var(--text-on-accent);
+  font-size: var(--font-ui-small);
+  font-weight: var(--font-medium);
+  box-shadow: none;
+  cursor: var(--cursor);
+  transition: background-color var(--runway-t);
+}
+
+.runway-add-btn:hover {
+  background-color: var(--interactive-accent-hover);
+}
+
+.runway-add-btn .svg-icon {
+  width: 15px;
+  height: 15px;
+}
+
+/* ── List view: filter toolbar ───────────────────────────────────────── */
 
 .runway-toolbar {
   display: flex;
   flex-direction: column;
-  gap: var(--size-2-2);
-  margin-bottom: var(--size-4-2);
+  gap: var(--size-2-3);
+  margin-bottom: var(--size-4-4);
 }
 
 .runway-toolbar__row {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--size-2-2);
-}
-
-.runway-toolbar__search {
-  flex: 1;
-  min-width: 12em;
-}
-
-.runway-toolbar__select {
-  font-size: var(--font-ui-smaller);
-  max-width: 12em;
+  gap: var(--size-2-3);
 }
 
 .runway-pill {
   font-size: var(--font-ui-smaller);
-  padding: var(--size-2-1) var(--size-2-3);
-  border-radius: var(--radius-l);
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--background-modifier-border);
   background-color: var(--background-secondary);
   color: var(--text-muted);
   box-shadow: none;
+  cursor: var(--cursor);
+  transition: background-color var(--runway-t), color var(--runway-t),
+    border-color var(--runway-t);
+}
+
+.runway-pill:hover {
+  background-color: var(--background-modifier-hover);
+  color: var(--text-normal);
 }
 
 .runway-pill.is-active {
   background-color: var(--interactive-accent);
+  border-color: var(--interactive-accent);
   color: var(--text-on-accent);
 }
 
-.runway-list__count {
+.runway-list .runway-toolbar__select {
+  width: auto;
+  max-width: 12em;
+  min-height: 30px;
   font-size: var(--font-ui-smaller);
-  color: var(--text-faint);
-  margin-bottom: var(--size-2-3);
-  font-variant-numeric: tabular-nums;
+  border: 1px solid var(--background-modifier-border);
+  background-color: var(--background-secondary);
+  color: var(--text-normal);
+  box-shadow: none;
 }
 
 /* ── Quick-add modal ─────────────────────────────────────────────────── */
@@ -280,15 +539,25 @@
 
 .runway-quick-add__chip {
   font-size: var(--font-ui-smaller);
-  padding: var(--size-2-1) var(--size-2-3);
-  border-radius: var(--radius-l);
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--background-modifier-border);
   background-color: var(--background-secondary);
   color: var(--text-muted);
   box-shadow: none;
+  cursor: var(--cursor);
+  transition: background-color var(--runway-t), color var(--runway-t),
+    border-color var(--runway-t);
+}
+
+.runway-quick-add__chip:hover {
+  background-color: var(--background-modifier-hover);
+  color: var(--text-normal);
 }
 
 .runway-quick-add__chip.is-active {
   background-color: var(--interactive-accent);
+  border-color: var(--interactive-accent);
   color: var(--text-on-accent);
 }
 
@@ -318,4 +587,13 @@
 .runway-edit-input {
   width: 100%;
   margin-bottom: var(--size-4-2);
+}
+
+/* ── Reduced motion ──────────────────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  .runway-list *,
+  .runway-sidebar * {
+    transition-duration: 0.01ms !important;
+  }
 }
