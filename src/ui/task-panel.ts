@@ -1,4 +1,5 @@
 import { Menu, Notice, setIcon } from 'obsidian';
+import type { MenuItem } from 'obsidian';
 
 import { todayKey } from '../dates.ts';
 import { DEFAULT_FILTER, queryTasks } from '../core/query.ts';
@@ -23,6 +24,11 @@ import type {
 
 function taskKey(task: Task): string {
   return `${task.path}:${task.line}`;
+}
+
+/** `MenuItem.setSubmenu()` exists at runtime (Obsidian ≥1.4) but isn't typed. */
+function submenuOf(item: MenuItem): Menu {
+  return (item as MenuItem & { setSubmenu(): Menu }).setSubmenu();
 }
 
 const PAGE_SIZE = 200;
@@ -85,12 +91,6 @@ function shortLabel(options: readonly [string, string][], value: string): string
   return options.find(([candidate]) => candidate === value)?.[1] ?? value;
 }
 
-function lastSegment(path: string): string {
-  const trimmed = path.replace(/\/+$/, '');
-  const slash = trimmed.lastIndexOf('/');
-  return slash === -1 ? trimmed : trimmed.slice(slash + 1);
-}
-
 export interface TaskPanelState {
   filter: TaskFilter;
   sort: TaskSort;
@@ -125,7 +125,6 @@ export class TaskPanel {
   private bulkBarEl: HTMLElement | null = null;
   private resultsEl: HTMLElement | null = null;
   private countEl: HTMLElement | null = null;
-  private toggleAllBtn: HTMLElement | null = null;
   private unsubscribe: (() => void) | null = null;
   private searchTimer: ReturnType<typeof setTimeout> | null = null;
   private lastGroupKeys: string[] = [];
@@ -213,26 +212,16 @@ export class TaskPanel {
       }, 150);
     });
 
-    const viewsBtn = actions.createEl('button', { cls: 'runway-iconbtn' });
-    setIcon(viewsBtn, 'bookmark');
-    viewsBtn.setAttribute('aria-label', 'Viste salvate');
-    viewsBtn.addEventListener('click', (event) => this.openViewsMenu(event));
-
-    this.toggleAllBtn = actions.createEl('button', { cls: 'runway-iconbtn' });
-    this.toggleAllBtn.addEventListener('click', () => this.toggleAll());
-
-    if (this.options.onExpand) {
-      const expand = actions.createEl('button', { cls: 'runway-iconbtn' });
-      setIcon(expand, 'maximize-2');
-      expand.setAttribute('aria-label', 'Apri lista completa');
-      expand.addEventListener('click', () => this.options.onExpand?.());
-    }
-
     const add = actions.createEl('button', { cls: 'runway-add-btn' });
     setIcon(add, 'plus');
     if (!this.options.compact) add.createSpan({ text: 'Task' });
     add.setAttribute('aria-label', 'Nuovo task');
     add.addEventListener('click', () => new QuickAddModal(this.ctx).open());
+
+    const overflow = actions.createEl('button', { cls: 'runway-iconbtn' });
+    setIcon(overflow, 'more-horizontal');
+    overflow.setAttribute('aria-label', 'Altro');
+    overflow.addEventListener('click', (event) => this.openOverflowMenu(event));
 
     this.filtersEl = root.createDiv({ cls: 'runway-panel__filters' });
     this.bulkBarEl = root.createDiv({ cls: 'runway-bulkbar is-hidden' });
@@ -282,76 +271,22 @@ export class TaskPanel {
       );
     }
 
-    // Secondary: everything else compact.
+    // Secondary: one "Filtri" chip (status + tag + folder + priority) + sort/group.
     const controlRow = bar.createDiv({ cls: 'runway-filterbar__row' });
-    const facets = this.facets();
 
-    const statusChip = controlRow.createEl('button', {
-      cls: `runway-fchip${isDefaultStatuses(this.state.filter.statuses) ? '' : ' is-active'}`,
+    const activeFilters = this.activeFilterCount();
+    const filterChip = controlRow.createEl('button', {
+      cls: `runway-fchip${activeFilters > 0 ? ' is-active' : ''}`,
     });
-    statusChip.createSpan({
+    const filterIcon = filterChip.createSpan({ cls: 'runway-fchip__icon' });
+    setIcon(filterIcon, 'filter');
+    filterChip.createSpan({
       cls: 'runway-fchip__label',
-      text: statusSummary(this.state.filter.statuses),
+      text: activeFilters > 0 ? `Filtri (${activeFilters})` : 'Filtri',
     });
-    const statusCaret = statusChip.createSpan({ cls: 'runway-fchip__caret' });
-    setIcon(statusCaret, 'chevron-down');
-    statusChip.addEventListener('click', (event) => {
-      const menu = new Menu();
-      for (const [status, label] of STATUS_OPTIONS) {
-        menu.addItem((item) =>
-          item
-            .setTitle(label)
-            .setChecked(this.state.filter.statuses.includes(status))
-            .onClick(() =>
-              this.update(() => {
-                this.state.filter.statuses = this.state.filter.statuses.includes(status)
-                  ? this.state.filter.statuses.filter((candidate) => candidate !== status)
-                  : [...this.state.filter.statuses, status];
-              }),
-            ),
-        );
-      }
-      menu.showAtMouseEvent(event);
-    });
-
-    this.chip(controlRow, {
-      label: this.state.filter.tags[0] ?? 'Tag',
-      active: this.state.filter.tags.length > 0,
-      options: [['', 'Tutti i tag'], ...facets.tags.map((tag): [string, string] => [tag, tag])],
-      current: this.state.filter.tags[0] ?? '',
-      emptyNote: 'Nessun tag',
-      onPick: (value) =>
-        this.update(() => {
-          this.state.filter.tags = value === '' ? [] : [value];
-        }),
-    });
-
-    this.chip(controlRow, {
-      label: this.state.filter.folder ? lastSegment(this.state.filter.folder) : 'Cartella',
-      active: this.state.filter.folder !== null,
-      options: [
-        ['', 'Tutte le cartelle'],
-        ...facets.folders.map((folder): [string, string] => [folder, folder]),
-      ],
-      current: this.state.filter.folder ?? '',
-      emptyNote: 'Nessuna cartella',
-      onPick: (value) =>
-        this.update(() => {
-          this.state.filter.folder = value === '' ? null : value;
-        }),
-    });
-
-    const priority = this.state.filter.priorities?.[0] ?? '';
-    this.chip(controlRow, {
-      label: priority === '' ? 'Priorità' : (PRIORITY_EMOJI[priority as Priority] ?? 'Priorità'),
-      active: this.state.filter.priorities !== null,
-      options: PRIORITY_OPTIONS,
-      current: priority,
-      onPick: (value) =>
-        this.update(() => {
-          this.state.filter.priorities = value === '' ? null : [value as Priority];
-        }),
-    });
+    const filterCaret = filterChip.createSpan({ cls: 'runway-fchip__caret' });
+    setIcon(filterCaret, 'chevron-down');
+    filterChip.addEventListener('click', (event) => this.openFiltersMenu(event));
 
     const controlEnd = controlRow.createDiv({ cls: 'runway-filterbar__end' });
     this.chip(controlEnd, {
@@ -374,6 +309,159 @@ export class TaskPanel {
           this.state.group = value;
         }),
     });
+  }
+
+  private activeFilterCount(): number {
+    let count = 0;
+    if (!isDefaultStatuses(this.state.filter.statuses)) count += 1;
+    if (this.state.filter.tags.length > 0) count += 1;
+    if (this.state.filter.folder !== null) count += 1;
+    if (this.state.filter.priorities !== null) count += 1;
+    return count;
+  }
+
+  /** One popover holding every secondary filter dimension as a submenu. */
+  private openFiltersMenu(event: MouseEvent): void {
+    const menu = new Menu();
+    const facets = this.facets();
+
+    menu.addItem((item) => {
+      item.setTitle(`Stato · ${statusSummary(this.state.filter.statuses)}`).setIcon('circle-dot');
+      const sub = submenuOf(item);
+      for (const [status, label] of STATUS_OPTIONS) {
+        sub.addItem((sitem: MenuItem) =>
+          sitem
+            .setTitle(label)
+            .setChecked(this.state.filter.statuses.includes(status))
+            .onClick(() =>
+              this.update(() => {
+                this.state.filter.statuses = this.state.filter.statuses.includes(status)
+                  ? this.state.filter.statuses.filter((candidate) => candidate !== status)
+                  : [...this.state.filter.statuses, status];
+              }),
+            ),
+        );
+      }
+    });
+
+    menu.addItem((item) => {
+      const current = this.state.filter.priorities?.[0] ?? '';
+      item.setTitle('Priorità').setIcon('flag');
+      const sub = submenuOf(item);
+      for (const [value, label] of PRIORITY_OPTIONS) {
+        sub.addItem((sitem: MenuItem) =>
+          sitem
+            .setTitle(label)
+            .setChecked(value === current)
+            .onClick(() =>
+              this.update(() => {
+                this.state.filter.priorities = value === '' ? null : [value as Priority];
+              }),
+            ),
+        );
+      }
+    });
+
+    menu.addItem((item) => {
+      item.setTitle('Tag').setIcon('hash');
+      const sub = submenuOf(item);
+      sub.addItem((sitem: MenuItem) =>
+        sitem
+          .setTitle('Tutti i tag')
+          .setChecked(this.state.filter.tags.length === 0)
+          .onClick(() => this.update(() => (this.state.filter.tags = []))),
+      );
+      for (const tag of facets.tags) {
+        sub.addItem((sitem: MenuItem) =>
+          sitem
+            .setTitle(tag)
+            .setChecked(this.state.filter.tags[0] === tag)
+            .onClick(() => this.update(() => (this.state.filter.tags = [tag]))),
+        );
+      }
+    });
+
+    menu.addItem((item) => {
+      item.setTitle('Cartella').setIcon('folder');
+      const sub = submenuOf(item);
+      sub.addItem((sitem: MenuItem) =>
+        sitem
+          .setTitle('Tutte le cartelle')
+          .setChecked(this.state.filter.folder === null)
+          .onClick(() => this.update(() => (this.state.filter.folder = null))),
+      );
+      for (const folder of facets.folders) {
+        sub.addItem((sitem: MenuItem) =>
+          sitem
+            .setTitle(folder)
+            .setChecked(this.state.filter.folder === folder)
+            .onClick(() => this.update(() => (this.state.filter.folder = folder))),
+        );
+      }
+    });
+
+    if (this.activeFilterCount() > 0) {
+      menu.addSeparator();
+      menu.addItem((item) =>
+        item
+          .setTitle('Azzera filtri')
+          .setIcon('filter-x')
+          .onClick(() =>
+            this.update(() => {
+              this.state.filter.statuses = [...OPEN_STATUSES];
+              this.state.filter.tags = [];
+              this.state.filter.folder = null;
+              this.state.filter.priorities = null;
+            }),
+          ),
+      );
+    }
+
+    menu.showAtMouseEvent(event);
+  }
+
+  /** Header overflow: saved views, collapse-all, expand-to-page. */
+  private openOverflowMenu(event: MouseEvent): void {
+    const menu = new Menu();
+
+    menu.addItem((item) => {
+      item.setTitle('Viste salvate').setIcon('bookmark');
+      const sub = submenuOf(item);
+      if (this.ctx.settings.savedViews.length === 0) {
+        sub.addItem((sitem: MenuItem) => sitem.setTitle('Nessuna vista').setDisabled(true));
+      }
+      for (const view of this.ctx.settings.savedViews) {
+        sub.addItem((sitem: MenuItem) => sitem.setTitle(view.name).onClick(() => this.applyView(view)));
+      }
+      sub.addSeparator();
+      sub.addItem((sitem: MenuItem) =>
+        sitem
+          .setTitle('Salva vista corrente…')
+          .setIcon('save')
+          .onClick(() => this.saveCurrentView()),
+      );
+    });
+
+    if (this.lastGroupKeys.length > 0) {
+      const anyOpen = this.lastGroupKeys.some((key) => !this.collapsed.has(key));
+      menu.addItem((item) =>
+        item
+          .setTitle(anyOpen ? 'Comprimi tutto' : 'Espandi tutto')
+          .setIcon(anyOpen ? 'chevrons-down-up' : 'chevrons-up-down')
+          .onClick(() => this.toggleAll()),
+      );
+    }
+
+    if (this.options.onExpand) {
+      menu.addItem((item) =>
+        item
+          .setTitle('Apri lista completa')
+          .setIcon('maximize-2')
+          .onClick(() => this.options.onExpand?.()),
+      );
+    }
+
+    menu.showAtMouseEvent(event);
   }
 
   private chip<T extends string>(
@@ -455,7 +543,6 @@ export class TaskPanel {
     const total = groups.reduce((sum, group) => sum + group.tasks.length, 0);
     this.countEl?.setText(this.options.compact ? String(total) : `${total} task`);
     this.lastGroupKeys = groups.filter((group) => group.label !== '').map((group) => group.key);
-    this.syncToggleAll();
     // Drop selection entries whose tasks are gone (completed, edited away).
     for (const key of [...this.selection]) if (!this.taskByKey.has(key)) this.selection.delete(key);
 
@@ -764,30 +851,6 @@ export class TaskPanel {
 
   // ── Saved views ─────────────────────────────────────────────────────
 
-  private openViewsMenu(event: MouseEvent): void {
-    const menu = new Menu();
-    const views = this.ctx.settings.savedViews;
-    if (views.length === 0) {
-      menu.addItem((item) => item.setTitle('Nessuna vista salvata').setDisabled(true));
-    }
-    for (const view of views) {
-      menu.addItem((item) =>
-        item
-          .setTitle(view.name)
-          .setIcon('bookmark')
-          .onClick(() => this.applyView(view)),
-      );
-    }
-    menu.addSeparator();
-    menu.addItem((item) =>
-      item
-        .setTitle('Salva vista corrente…')
-        .setIcon('save')
-        .onClick(() => this.saveCurrentView()),
-    );
-    menu.showAtMouseEvent(event);
-  }
-
   private applyView(view: SavedView): void {
     this.state.filter = { ...structuredClone(DEFAULT_FILTER), ...view.filter };
     this.state.sort = view.sort;
@@ -823,15 +886,5 @@ export class TaskPanel {
     else this.collapsed.clear();
     this.options.onStateChange();
     this.renderResults();
-  }
-
-  private syncToggleAll(): void {
-    const btn = this.toggleAllBtn;
-    if (!btn) return;
-    const anyOpen = this.lastGroupKeys.some((key) => !this.collapsed.has(key));
-    btn.empty();
-    setIcon(btn, anyOpen ? 'chevrons-down-up' : 'chevrons-up-down');
-    btn.setAttribute('aria-label', anyOpen ? 'Comprimi tutto' : 'Espandi tutto');
-    btn.toggleClass('is-hidden', this.lastGroupKeys.length === 0);
   }
 }
