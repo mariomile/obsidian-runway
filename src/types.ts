@@ -71,7 +71,7 @@ export interface TaskFilter {
 
 export type TaskSort = 'due' | 'priority' | 'path';
 
-export type TaskGroup = 'none' | 'date' | 'priority' | 'tag' | 'folder';
+export type TaskGroup = 'none' | 'note' | 'date' | 'priority' | 'tag' | 'folder';
 
 export interface TaskGroupResult {
   key: string;
@@ -82,6 +82,8 @@ export interface TaskGroupResult {
 export interface RunwaySettings {
   /** Folder path prefixes excluded from indexing (.obsidian is always excluded). */
   excludeFolders: string[];
+  /** Folders whose tasks are "not yet filed" — pinned as Inbox in the note grouping. */
+  inboxFolders: string[];
   /** Days ahead shown in the sidebar Upcoming section. */
   sidebarUpcomingDays: number;
   /** Daily note folder for quick-add default target. */

@@ -117,6 +117,31 @@ interface GroupSpec {
   label: string;
 }
 
+export interface QueryOptions {
+  /** Folder prefixes whose tasks land in the pinned Inbox bucket of the note grouping. */
+  inboxFolders?: string[];
+}
+
+function isInboxPath(path: string, inboxFolders: string[]): boolean {
+  return inboxFolders.some((folder) => {
+    const prefix = folder.replace(/\/+$/, '');
+    return prefix !== '' && (path === prefix || path.startsWith(`${prefix}/`));
+  });
+}
+
+function noteName(path: string): string {
+  const slash = path.lastIndexOf('/');
+  return path.slice(slash + 1).replace(/\.md$/, '');
+}
+
+/** Inbox first, then one bucket per source note, ordered by path. */
+function noteGroup(task: Task, inboxFolders: string[]): GroupSpec {
+  if (isInboxPath(task.path, inboxFolders)) {
+    return { key: '0-inbox', label: 'Inbox' };
+  }
+  return { key: `1-${task.path}`, label: noteName(task.path) };
+}
+
 function dateGroup(task: Task, today: DayKey): GroupSpec {
   const date = taskDate(task);
   if (date === undefined) return { key: 'zz-none', label: 'No date' };
@@ -129,10 +154,17 @@ function dateGroup(task: Task, today: DayKey): GroupSpec {
   return { key: 'd-later', label: 'Later' };
 }
 
-function groupSpec(task: Task, group: TaskGroup, today: DayKey): GroupSpec {
+function groupSpec(
+  task: Task,
+  group: TaskGroup,
+  today: DayKey,
+  options: QueryOptions,
+): GroupSpec {
   switch (group) {
     case 'none':
       return { key: 'all', label: '' };
+    case 'note':
+      return noteGroup(task, options.inboxFolders ?? []);
     case 'date':
       return dateGroup(task, today);
     case 'priority': {
@@ -158,6 +190,7 @@ export function queryTasks(
   sort: TaskSort,
   group: TaskGroup,
   today: DayKey,
+  options: QueryOptions = {},
 ): TaskGroupResult[] {
   const matched = sortTasks(
     tasks.filter((task) => matchesTask(task, filter, today)),
@@ -165,7 +198,7 @@ export function queryTasks(
   );
   const groups = new Map<string, TaskGroupResult>();
   for (const task of matched) {
-    const spec = groupSpec(task, group, today);
+    const spec = groupSpec(task, group, today, options);
     let bucket = groups.get(spec.key);
     if (!bucket) {
       bucket = { key: spec.key, label: spec.label, tasks: [] };

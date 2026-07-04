@@ -33,6 +33,22 @@ export class RunwaySettingTab extends PluginSettingTab {
       });
 
     new Setting(containerEl)
+      .setName('Cartelle Inbox')
+      .setDesc('Una per riga. I task in queste cartelle finiscono nella sezione Inbox del raggruppamento per nota.')
+      .addTextArea((text) => {
+        text
+          .setValue(this.plugin.settings.inboxFolders.join('\n'))
+          .onChange(async (value) => {
+            this.plugin.settings.inboxFolders = value
+              .split('\n')
+              .map((line) => line.trim())
+              .filter((line) => line !== '');
+            await this.plugin.saveSettings();
+          });
+        text.inputEl.rows = 3;
+      });
+
+    new Setting(containerEl)
       .setName('Giorni "Prossimi" in sidebar')
       .setDesc('Orizzonte della sezione Upcoming nella sidebar (0 per nasconderla).')
       .addSlider((slider) =>
