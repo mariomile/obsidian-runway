@@ -27,28 +27,35 @@ function taskKey(task: Task): string {
 
 const PAGE_SIZE = 200;
 
-const STATUS_PILLS: [TaskStatus, string][] = [
+/** Prominent time views — the primary way to slice the list. */
+const DUE_SEGMENTS: [DueFilter, string][] = [
+  ['all', 'Tutti'],
+  ['today', 'Oggi'],
+  ['week', 'Settimana'],
+  ['overdue', 'In ritardo'],
+  ['none', 'Senza data'],
+];
+
+const STATUS_OPTIONS: [TaskStatus, string][] = [
   ['todo', 'Da fare'],
   ['in-progress', 'In corso'],
   ['done', 'Fatti'],
   ['cancelled', 'Annullati'],
 ];
 
-const DUE_OPTIONS: [DueFilter, string][] = [
-  ['all', 'Qualsiasi data'],
-  ['overdue', 'In ritardo'],
-  ['today', 'Entro oggi'],
-  ['week', 'Entro 7 giorni'],
-  ['none', 'Senza data'],
-];
+const OPEN_STATUSES: TaskStatus[] = ['todo', 'in-progress'];
 
-const DUE_CHIP: Record<DueFilter, string> = {
-  all: 'Data',
-  overdue: 'In ritardo',
-  today: 'Oggi',
-  week: '7 giorni',
-  none: 'Senza data',
-};
+function isDefaultStatuses(statuses: TaskStatus[]): boolean {
+  return statuses.length === 2 && OPEN_STATUSES.every((status) => statuses.includes(status));
+}
+
+function statusSummary(statuses: TaskStatus[]): string {
+  if (statuses.length === 0) return 'Ogni stato';
+  if (isDefaultStatuses(statuses)) return 'Aperti';
+  return statuses
+    .map((status) => STATUS_OPTIONS.find(([value]) => value === status)?.[1] ?? status)
+    .join(', ');
+}
 
 const SORT_OPTIONS: [TaskSort, string][] = [
   ['due', 'Scadenza'],
@@ -258,34 +265,53 @@ export class TaskPanel {
       );
     }
 
-    const statusRow = bar.createDiv({ cls: 'runway-filterbar__row' });
-    for (const [status, label] of STATUS_PILLS) {
-      const active = this.state.filter.statuses.includes(status);
-      const pill = statusRow.createEl('button', {
-        cls: `runway-pill${active ? ' is-active' : ''}`,
+    // Primary: prominent time segments (Tutti · Oggi · Settimana · …).
+    const segRow = bar.createDiv({ cls: 'runway-filterbar__row' });
+    const segments = segRow.createDiv({ cls: 'runway-segments' });
+    for (const [value, label] of DUE_SEGMENTS) {
+      const active = !this.state.filter.exactDay && this.state.filter.due === value;
+      const segment = segments.createEl('button', {
+        cls: `runway-segment${active ? ' is-active' : ''}`,
         text: label,
       });
-      pill.addEventListener('click', () =>
+      segment.addEventListener('click', () =>
         this.update(() => {
-          this.state.filter.statuses = active
-            ? this.state.filter.statuses.filter((candidate) => candidate !== status)
-            : [...this.state.filter.statuses, status];
+          this.state.filter.due = value;
+          this.state.filter.exactDay = null;
         }),
       );
     }
 
+    // Secondary: everything else compact.
     const controlRow = bar.createDiv({ cls: 'runway-filterbar__row' });
     const facets = this.facets();
 
-    this.chip(controlRow, {
-      label: DUE_CHIP[this.state.filter.due],
-      active: this.state.filter.due !== 'all',
-      options: DUE_OPTIONS,
-      current: this.state.filter.due,
-      onPick: (value) =>
-        this.update(() => {
-          this.state.filter.due = value;
-        }),
+    const statusChip = controlRow.createEl('button', {
+      cls: `runway-fchip${isDefaultStatuses(this.state.filter.statuses) ? '' : ' is-active'}`,
+    });
+    statusChip.createSpan({
+      cls: 'runway-fchip__label',
+      text: statusSummary(this.state.filter.statuses),
+    });
+    const statusCaret = statusChip.createSpan({ cls: 'runway-fchip__caret' });
+    setIcon(statusCaret, 'chevron-down');
+    statusChip.addEventListener('click', (event) => {
+      const menu = new Menu();
+      for (const [status, label] of STATUS_OPTIONS) {
+        menu.addItem((item) =>
+          item
+            .setTitle(label)
+            .setChecked(this.state.filter.statuses.includes(status))
+            .onClick(() =>
+              this.update(() => {
+                this.state.filter.statuses = this.state.filter.statuses.includes(status)
+                  ? this.state.filter.statuses.filter((candidate) => candidate !== status)
+                  : [...this.state.filter.statuses, status];
+              }),
+            ),
+        );
+      }
+      menu.showAtMouseEvent(event);
     });
 
     this.chip(controlRow, {
