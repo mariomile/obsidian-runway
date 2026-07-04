@@ -1,9 +1,10 @@
 import { Notice } from 'obsidian';
 import type { App, TFile } from 'obsidian';
 
-import { applyLineEdit, removeLine } from '../core/line-edit.ts';
+import { applyLineEdit, locateLine, removeLine } from '../core/line-edit.ts';
 import { parseTaskLine } from '../core/parse.ts';
 import { completeRecurring } from '../core/recurrence.ts';
+import { isChildNote, noteLine } from '../core/task-note.ts';
 import {
   removeDateField,
   rewriteDate,
@@ -93,6 +94,41 @@ export class TaskEditService {
 
   async editDescription(ref: TaskRef, text: string): Promise<boolean> {
     return this.editLine(ref, (line) => rewriteDescription(line, text));
+  }
+
+  /**
+   * Attach / replace / remove a task's note — the indented child line right
+   * below it. Empty text removes the note. Guarded by the task's rawText.
+   */
+  async setNote(ref: TaskRef, text: string): Promise<boolean> {
+    const file = this.app.vault.getFileByPath(ref.path);
+    if (!file) {
+      new Notice('Runway: file non trovato.');
+      return false;
+    }
+    let changed = false;
+    await this.app.vault.process(file, (content) => {
+      const lines = content.split('\n');
+      const index = locateLine(lines, ref);
+      if (index === -1) return content;
+      const taskLine = lines[index] ?? ref.rawText;
+      const hasNote = isChildNote(taskLine, lines[index + 1]);
+      const trimmed = text.trim();
+      if (trimmed === '') {
+        if (hasNote) {
+          lines.splice(index + 1, 1);
+          changed = true;
+        }
+      } else {
+        const line = noteLine(taskLine, trimmed);
+        if (hasNote) lines[index + 1] = line;
+        else lines.splice(index + 1, 0, line);
+        changed = true;
+      }
+      return changed ? lines.join('\n') : content;
+    });
+    if (!changed) new Notice('Runway: il task è cambiato nel frattempo — riprova.');
+    return changed;
   }
 
   /**

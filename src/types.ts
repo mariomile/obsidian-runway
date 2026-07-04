@@ -51,6 +51,8 @@ export interface Task extends ParsedTask {
   rawText: string;
   /** Top-level folder ('' for vault root). */
   folder: string;
+  /** An attached note (the indented child line below the task), if any. */
+  note?: string;
 }
 
 export type DueFilter = 'all' | 'overdue' | 'today' | 'week' | 'none';

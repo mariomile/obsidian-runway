@@ -641,6 +641,36 @@
   margin-top: 1px;
 }
 
+.runway-row__note {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  margin-top: 2px;
+  font-size: var(--font-ui-smaller);
+  color: var(--text-muted);
+  cursor: var(--cursor);
+  border-radius: var(--radius-s);
+}
+
+.runway-row__note:hover {
+  color: var(--text-normal);
+}
+
+.runway-row__note-icon {
+  display: inline-flex;
+  flex-shrink: 0;
+  color: var(--text-faint);
+}
+
+.runway-row__note-icon .svg-icon {
+  width: 12px;
+  height: 12px;
+}
+
+.runway-row__note-text {
+  overflow-wrap: anywhere;
+}
+
 .runway-row__more {
   flex-shrink: 0;
   display: flex;

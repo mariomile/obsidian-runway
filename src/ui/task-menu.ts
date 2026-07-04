@@ -3,6 +3,7 @@ import type { App } from 'obsidian';
 
 import { buildDateMenuItems } from './date-menu.ts';
 import { pickNote } from './note-picker.ts';
+import { promptText } from './prompt-modal.ts';
 import { PRIORITY_EMOJI } from '../core/parse.ts';
 import type { RunwayContext } from './context.ts';
 import type { TaskRef } from '../edits/task-edit.ts';
@@ -70,6 +71,13 @@ export function refOf(task: Task): TaskRef {
   return { path: task.path, line: task.line, rawText: task.rawText };
 }
 
+/** Prompt for a task note (add or edit) and write it as an indented child. */
+export function promptTaskNote(ctx: RunwayContext, task: Task): void {
+  promptText(ctx.app, task.note ? 'Modifica nota' : 'Aggiungi nota', task.note ?? '', (text) => {
+    void ctx.edits.setNote(refOf(task), text);
+  });
+}
+
 export function showTaskMenu(event: MouseEvent, ctx: RunwayContext, task: Task): void {
   const menu = new Menu();
   const ref = refOf(task);
@@ -118,6 +126,20 @@ export function showTaskMenu(event: MouseEvent, ctx: RunwayContext, task: Task):
           }).open();
         }),
     );
+    menu.addItem((item) =>
+      item
+        .setTitle(task.note ? 'Modifica nota…' : 'Aggiungi nota…')
+        .setIcon('text')
+        .onClick(() => promptTaskNote(ctx, task)),
+    );
+    if (task.note) {
+      menu.addItem((item) =>
+        item
+          .setTitle('Rimuovi nota')
+          .setIcon('trash')
+          .onClick(() => void ctx.edits.setNote(ref, '')),
+      );
+    }
     menu.addItem((item) =>
       item
         .setTitle('Sposta in nota…')
