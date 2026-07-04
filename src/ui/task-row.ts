@@ -10,6 +10,10 @@ import type { DateEmoji, DayKey, Task } from '../types.ts';
 export interface TaskRowOptions {
   /** Hide the note-name chip (e.g. when grouping by note already says it). */
   showNote?: boolean;
+  /** Keyboard cursor is on this row. */
+  cursor?: boolean;
+  /** Row is part of the current multi-selection. */
+  selected?: boolean;
 }
 
 function noteName(path: string): string {
@@ -70,10 +74,12 @@ export function renderTaskRow(
   ctx: RunwayContext,
   task: Task,
   options: TaskRowOptions = {},
-): void {
+): HTMLElement {
   const ref = refOf(task);
   const row = container.createDiv({ cls: 'runway-row' });
   row.dataset.status = task.status;
+  row.toggleClass('is-cursor', options.cursor === true);
+  row.toggleClass('is-selected', options.selected === true);
 
   const checkWrap = row.createDiv({ cls: 'runway-row__check' });
   checkWrap.createSpan({ cls: `runway-check runway-check--${task.status}` });
@@ -130,4 +136,5 @@ export function renderTaskRow(
     event.stopPropagation();
     showTaskMenu(event, ctx, task);
   });
+  return row;
 }

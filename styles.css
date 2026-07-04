@@ -535,6 +535,50 @@
   background-color: var(--background-modifier-hover);
 }
 
+.runway-row.is-cursor {
+  box-shadow: inset 2px 0 0 var(--interactive-accent);
+  background-color: var(--background-modifier-hover);
+}
+
+.runway-row.is-selected {
+  background-color: color-mix(in srgb, var(--interactive-accent) 14%, transparent);
+}
+
+.runway-row.is-selected:hover {
+  background-color: color-mix(in srgb, var(--interactive-accent) 20%, transparent);
+}
+
+/* ── Bulk action bar ─────────────────────────────────────────────────── */
+
+.runway-bulkbar {
+  display: flex;
+  align-items: center;
+  gap: var(--size-2-3);
+  padding: var(--size-2-2) var(--size-2-3);
+  margin-bottom: var(--size-2-2);
+  border-radius: var(--radius-s);
+  background-color: color-mix(in srgb, var(--interactive-accent) 12%, var(--background-secondary));
+  border: 1px solid color-mix(in srgb, var(--interactive-accent) 30%, transparent);
+}
+
+.runway-bulkbar.is-hidden {
+  display: none;
+}
+
+.runway-bulkbar__count {
+  font-size: var(--font-ui-smaller);
+  font-weight: var(--font-medium);
+  color: var(--text-normal);
+  font-variant-numeric: tabular-nums;
+}
+
+.runway-bulkbar__actions {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-left: auto;
+}
+
 .runway-row__main {
   flex: 1;
   min-width: 0;
