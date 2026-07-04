@@ -144,6 +144,16 @@ test('group by note without inbox folders has no Inbox bucket', () => {
   assert.ok(groups.every((group) => group.label !== 'Inbox'));
 });
 
+test('exactDay filter matches only that effective date and overrides due preset', () => {
+  const onDay = TASKS.filter((task) =>
+    matchesTask(task, filter({ exactDay: '2026-07-03', due: 'overdue' }), TODAY),
+  );
+  assert.deepEqual(
+    onDay.map((task) => task.description).sort(),
+    ['Due today', 'In progress'],
+  );
+});
+
 test('group none returns a single bucket with everything matched', () => {
   const groups = queryTasks(TASKS, DEFAULT_FILTER, 'due', 'none', TODAY);
   assert.equal(groups.length, 1);

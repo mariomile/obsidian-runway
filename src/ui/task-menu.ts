@@ -2,6 +2,7 @@ import { Menu, Modal } from 'obsidian';
 import type { App } from 'obsidian';
 
 import { buildDateMenuItems } from './date-menu.ts';
+import { pickNote } from './note-picker.ts';
 import { PRIORITY_EMOJI } from '../core/parse.ts';
 import type { RunwayContext } from './context.ts';
 import type { TaskRef } from '../edits/task-edit.ts';
@@ -115,6 +116,16 @@ export function showTaskMenu(event: MouseEvent, ctx: RunwayContext, task: Task):
           new EditDescriptionModal(ctx.app, task.description, (text) => {
             void ctx.edits.editDescription(ref, text);
           }).open();
+        }),
+    );
+    menu.addItem((item) =>
+      item
+        .setTitle('Sposta in nota…')
+        .setIcon('folder-input')
+        .onClick(() => {
+          pickNote(ctx.app, 'Sposta il task in…', (file) => {
+            void ctx.edits.moveToNote(ref, file.path);
+          });
         }),
     );
   }

@@ -1,33 +1,12 @@
-import { FuzzySuggestModal, Modal, Notice } from 'obsidian';
-import type { TFile } from 'obsidian';
+import { Modal, Notice } from 'obsidian';
 
 import { addDays, todayKey } from '../dates.ts';
 import { dailyNotePath } from '../edits/daily-note.ts';
 import { PRIORITY_EMOJI } from '../core/parse.ts';
+import { parseNaturalDate } from '../core/natural-date.ts';
+import { pickNote } from './note-picker.ts';
 import type { RunwayContext } from './context.ts';
 import type { DayKey, Priority } from '../types.ts';
-
-class TargetPickerModal extends FuzzySuggestModal<TFile> {
-  private readonly onPick: (file: TFile) => void;
-
-  constructor(ctx: RunwayContext, onPick: (file: TFile) => void) {
-    super(ctx.app);
-    this.onPick = onPick;
-    this.setPlaceholder('Nota di destinazione…');
-  }
-
-  getItems(): TFile[] {
-    return this.app.vault.getMarkdownFiles();
-  }
-
-  getItemText(file: TFile): string {
-    return file.path;
-  }
-
-  onChooseItem(file: TFile): void {
-    this.onPick(file);
-  }
-}
 
 /** Quick-add: text + date chips + priority + target note (default: today's daily). */
 export class QuickAddModal extends Modal {
@@ -49,10 +28,12 @@ export class QuickAddModal extends Modal {
     const input = this.contentEl.createEl('input', {
       cls: 'runway-quick-add__input',
       type: 'text',
-      placeholder: 'Descrizione (emoji Tasks passano così come sono)',
+      placeholder: 'Descrizione — prova "chiama Marco domani"',
     });
+    const hint = this.contentEl.createDiv({ cls: 'runway-quick-add__hint' });
     input.addEventListener('input', () => {
       this.text = input.value;
+      this.syncHint(hint);
     });
 
     const today = todayKey();
@@ -100,10 +81,10 @@ export class QuickAddModal extends Modal {
     });
     const change = targetRow.createEl('button', { text: 'Cambia' });
     change.addEventListener('click', () => {
-      new TargetPickerModal(this.ctx, (file) => {
+      pickNote(this.ctx.app, 'Nota di destinazione…', (file) => {
         this.targetPath = file.path;
         targetLabel.setText(`→ ${file.path}`);
-      }).open();
+      });
     });
 
     const buttons = this.contentEl.createDiv({ cls: 'modal-button-container' });
@@ -116,12 +97,29 @@ export class QuickAddModal extends Modal {
     input.focus();
   }
 
-  private async submit(): Promise<void> {
+  /** When no date chip is picked, honor a trailing natural-language date. */
+  private resolved(): { description: string; date: DayKey | null } {
     const text = this.text.trim();
-    if (text === '') return;
-    let body = text;
+    if (this.date !== null) return { description: text, date: this.date };
+    const natural = parseNaturalDate(text, todayKey());
+    return { description: natural.date ? natural.cleaned : text, date: natural.date };
+  }
+
+  private syncHint(hint: HTMLElement): void {
+    if (this.date !== null) {
+      hint.setText('');
+      return;
+    }
+    const natural = parseNaturalDate(this.text.trim(), todayKey());
+    hint.setText(natural.date ? `📅 ${natural.date} — "${natural.cleaned}"` : '');
+  }
+
+  private async submit(): Promise<void> {
+    const { description, date } = this.resolved();
+    if (description === '') return;
+    let body = description;
     if (this.priority !== null) body += ` ${PRIORITY_EMOJI[this.priority]}`;
-    if (this.date !== null) body += ` 📅 ${this.date}`;
+    if (date !== null) body += ` 📅 ${date}`;
     this.close();
     const path = await this.ctx.edits.quickAdd(body, this.targetPath ?? undefined);
     if (path !== null) new Notice(`Runway: task aggiunto a ${path}.`);

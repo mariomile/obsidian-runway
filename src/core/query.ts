@@ -16,6 +16,7 @@ export const DEFAULT_FILTER: TaskFilter = {
   tags: [],
   folder: null,
   due: 'all',
+  exactDay: null,
   priorities: null,
 };
 
@@ -62,6 +63,9 @@ function matchesTag(taskTags: string[], wanted: string): boolean {
 
 export function matchesTask(task: Task, filter: TaskFilter, today: DayKey): boolean {
   if (filter.statuses.length > 0 && !filter.statuses.includes(task.status)) return false;
+  if (filter.exactDay) {
+    if (taskDate(task) !== filter.exactDay) return false;
+  }
   if (filter.tags.length > 0 && !filter.tags.some((tag) => matchesTag(task.tags, tag))) {
     return false;
   }
@@ -69,7 +73,7 @@ export function matchesTask(task: Task, filter: TaskFilter, today: DayKey): bool
     const prefix = filter.folder.endsWith('/') ? filter.folder : `${filter.folder}/`;
     if (!task.path.startsWith(prefix)) return false;
   }
-  if (!matchesDue(task, filter.due, today)) return false;
+  if (!filter.exactDay && !matchesDue(task, filter.due, today)) return false;
   if (
     filter.priorities !== null &&
     (task.priority === null || !filter.priorities.includes(task.priority))

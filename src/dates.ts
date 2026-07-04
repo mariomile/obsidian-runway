@@ -54,6 +54,24 @@ export function addDays(key: DayKey, n: number): DayKey {
   return fromDate(new Date(y, m - 1, d + n));
 }
 
+export function addMonths(key: DayKey, n: number): DayKey {
+  const { y, m, d } = mustParse(key);
+  const monthIndex = m - 1 + n;
+  const targetYear = y + Math.floor(monthIndex / 12);
+  const targetMonth = ((monthIndex % 12) + 12) % 12 + 1;
+  const clampedDay = Math.min(d, daysInMonth(targetYear, targetMonth));
+  return dayKey(targetYear, targetMonth, clampedDay);
+}
+
+/** Whole-day difference b − a (both must be valid keys). */
+export function daysBetween(a: DayKey, b: DayKey): number {
+  const from = mustParse(a);
+  const to = mustParse(b);
+  const ms =
+    new Date(to.y, to.m - 1, to.d).getTime() - new Date(from.y, from.m - 1, from.d).getTime();
+  return Math.round(ms / 86_400_000);
+}
+
 export function compareDayKeys(a: DayKey, b: DayKey): number {
   return a < b ? -1 : a > b ? 1 : 0;
 }
