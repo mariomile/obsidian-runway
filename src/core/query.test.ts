@@ -108,13 +108,15 @@ test('group by date produces ordered buckets', () => {
   );
 });
 
-test('group by folder and by tag', () => {
+test('group by folder uses the full subfolder path', () => {
   const byFolder = queryTasks(TASKS, DEFAULT_FILTER, 'due', 'folder', TODAY);
   assert.deepEqual(
     byFolder.map((group) => group.label),
-    ['Active', 'Journal', 'Resources'],
+    ['Active/Projects/Captoo', 'Active/Projects/Exo', 'Journal/Daily', 'Resources/Books'],
   );
+});
 
+test('group by tag', () => {
   const byTag = queryTasks(TASKS, DEFAULT_FILTER, 'due', 'tag', TODAY);
   assert.equal(byTag[byTag.length - 1]?.label, 'No tag');
 });

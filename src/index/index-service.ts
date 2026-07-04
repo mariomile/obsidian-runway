@@ -1,6 +1,7 @@
 import type { App, CachedMetadata, Plugin, TAbstractFile, TFile } from 'obsidian';
 
 import { parseTaskLine } from '../core/parse.ts';
+import { isChildNote, noteTextOf } from '../core/task-note.ts';
 import { topLevelFolder } from '../utils.ts';
 import { TaskIndexCore } from './task-index.ts';
 import type { Task } from '../types.ts';
@@ -26,7 +27,9 @@ export function extractTasks(path: string, content: string, cache: CachedMetadat
     if (rawText === undefined) continue;
     const parsed = parseTaskLine(rawText);
     if (!parsed) continue;
-    tasks.push({ ...parsed, path, line, rawText, folder });
+    const next = lines[line + 1];
+    const note = isChildNote(rawText, next) ? noteTextOf(next as string) : undefined;
+    tasks.push({ ...parsed, path, line, rawText, folder, note });
   }
   return tasks;
 }

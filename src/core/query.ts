@@ -83,7 +83,9 @@ export function matchesTask(task: Task, filter: TaskFilter, today: DayKey): bool
 
   const query = normalizeText(filter.text.trim());
   if (query === '') return true;
-  const haystack = normalizeText(`${task.description} ${task.path} ${task.tags.join(' ')}`);
+  const haystack = normalizeText(
+    `${task.description} ${task.note ?? ''} ${task.path} ${task.tags.join(' ')}`,
+  );
   return query
     .split(/\s+/)
     .filter(Boolean)
@@ -138,6 +140,12 @@ function noteName(path: string): string {
   return path.slice(slash + 1).replace(/\.md$/, '');
 }
 
+/** Full containing folder ('' for a vault-root note). */
+function parentFolder(path: string): string {
+  const slash = path.lastIndexOf('/');
+  return slash === -1 ? '' : path.slice(0, slash);
+}
+
 /** Inbox first, then one bucket per source note, ordered by path. */
 function noteGroup(task: Task, inboxFolders: string[]): GroupSpec {
   if (isInboxPath(task.path, inboxFolders)) {
@@ -182,8 +190,8 @@ function groupSpec(
       return tag === undefined ? { key: 'zz-none', label: 'No tag' } : { key: tag, label: tag };
     }
     case 'folder': {
-      const folder = task.folder === '' ? 'Vault root' : task.folder;
-      return { key: folder, label: folder };
+      const dir = parentFolder(task.path);
+      return dir === '' ? { key: '', label: 'Vault root' } : { key: dir, label: dir };
     }
   }
 }

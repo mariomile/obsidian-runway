@@ -56,6 +56,7 @@ export interface RunwayApi {
   completeTask(task: TaskDTO): Promise<boolean>;
   reschedule(task: TaskDTO, date: DayKey): Promise<boolean>;
   setPriority(task: TaskDTO, priority: Priority | null): Promise<boolean>;
+  setNote(task: TaskDTO, text: string): Promise<boolean>;
   moveToNote(task: TaskDTO, targetPath: string): Promise<boolean>;
   openForDay(day: DayKey): Promise<void>;
 }
@@ -101,6 +102,9 @@ export function createRunwayApi(
     },
     setPriority(task, priority) {
       return edits.setPriority(toRef(task), priority);
+    },
+    setNote(task, text) {
+      return edits.setNote(toRef(task), text);
     },
     moveToNote(task, targetPath) {
       return edits.moveToNote(toRef(task), targetPath);

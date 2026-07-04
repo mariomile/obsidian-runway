@@ -4,7 +4,7 @@ import { todayKey } from '../dates.ts';
 import { DEFAULT_FILTER, queryTasks } from '../core/query.ts';
 import { PRIORITY_EMOJI } from '../core/parse.ts';
 import { renderTaskRow } from './task-row.ts';
-import { refOf } from './task-menu.ts';
+import { promptTaskNote, refOf } from './task-menu.ts';
 import { showDateMenu } from './date-menu.ts';
 import { pickNote } from './note-picker.ts';
 import { QuickAddModal } from './quick-add-modal.ts';
@@ -598,6 +598,11 @@ export class TaskPanel {
       case 'e':
         this.editCursor();
         break;
+      case 'n': {
+        const task = this.cursorTask();
+        if (task) promptTaskNote(this.ctx, task);
+        break;
+      }
       case 'Enter':
       case 'o':
         this.openCursor();

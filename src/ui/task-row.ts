@@ -2,7 +2,7 @@ import { setIcon } from 'obsidian';
 
 import { compareDayKeys, todayKey } from '../dates.ts';
 import { PRIORITY_EMOJI } from '../core/parse.ts';
-import { refOf, showTaskMenu } from './task-menu.ts';
+import { promptTaskNote, refOf, showTaskMenu } from './task-menu.ts';
 import { showDateMenu } from './date-menu.ts';
 import type { RunwayContext } from './context.ts';
 import type { DateEmoji, DayKey, Task } from '../types.ts';
@@ -122,6 +122,17 @@ export function renderTaskRow(
     note.addEventListener('click', (event) => {
       event.stopPropagation();
       void ctx.edits.openAtLine(ref);
+    });
+  }
+
+  if (task.note) {
+    const noteEl = main.createDiv({ cls: 'runway-row__note' });
+    setIcon(noteEl.createSpan({ cls: 'runway-row__note-icon' }), 'text');
+    noteEl.createSpan({ cls: 'runway-row__note-text', text: task.note });
+    noteEl.setAttribute('aria-label', 'Modifica nota');
+    noteEl.addEventListener('click', (event) => {
+      event.stopPropagation();
+      promptTaskNote(ctx, task);
     });
   }
 
