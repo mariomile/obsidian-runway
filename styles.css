@@ -778,6 +778,23 @@
   margin-bottom: var(--size-4-2);
 }
 
+/* ── Status bar ──────────────────────────────────────────────────────── */
+
+.runway-statusbar__icon {
+  display: inline-flex;
+  vertical-align: middle;
+}
+
+.runway-statusbar__icon .svg-icon {
+  width: 14px;
+  height: 14px;
+  color: var(--color-orange);
+}
+
+.runway-statusbar__count {
+  font-variant-numeric: tabular-nums;
+}
+
 /* ── Reduced motion ──────────────────────────────────────────────────── */
 
 @media (prefers-reduced-motion: reduce) {
