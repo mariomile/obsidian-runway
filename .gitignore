@@ -2,3 +2,7 @@ node_modules/
 main.js
 .obsidian-plugin-dir
 .DS_Store
+
+# Internal design context (impeccable) — not for the public repo
+PRODUCT.md
+DESIGN.md
