@@ -6,10 +6,12 @@ Task management for [Obsidian](https://obsidian.md): a sidebar glance and a filt
 
 Sidebar and full page are the **same component** at two densities — identical filtering, grouping, accordion and keyboard behavior.
 
-- **Sidebar** — a compact glance; defaults to date grouping with the far buckets collapsed.
+- **Sidebar** — a compact glance; defaults to the day-by-day **Agenda** grouping with the far buckets collapsed.
 - **Task list** (workspace tab) — the full-density surface.
 
-Both offer: a compact filter bar (text search + status pills + menu-chips for due / tag / folder / priority / sort / group), **collapsible accordion groups** (per-group + collapse-all, state persisted), grouping by **note (Inbox pinned first)** / date / priority / tag / folder, and **saved views** (bookmark menu → apply or save a named filter+sort+group preset; managed from settings).
+Both offer: a compact filter bar (text search + status pills + menu-chips for due / tag / folder / priority / sort / group), **collapsible accordion groups** (per-group + collapse-all, state persisted), grouping by **note (Inbox pinned first)** / date / **agenda** / priority / tag / folder, and **saved views** (bookmark menu → apply or save a named filter+sort+group preset; managed from settings).
+
+- **Agenda grouping** — a day-by-day timeline: one bucket per calendar day from today to a configurable horizon (default 14 days, **Settings → Orizzonte Agenda**), with everything past-due folded into a single **Overdue** bucket up top and anything beyond the horizon into **Later**. Empty days never render a bucket, so the list stays tight. Each day header carries the weekday (or **Today** / **Tomorrow**) plus a faint date; the Overdue bucket reads red and Today is marked with a due-dot. Far buckets (Later / No date) open collapsed.
 
 ## Interactions & keyboard
 
@@ -48,7 +50,7 @@ Everything writes back to the source note through a guarded line edit — the wr
 ## Status bar & commands
 
 - Status bar shows an **overdue counter**; click it to open the list filtered to overdue.
-- Commands: open list, open sidebar, quick-add, and **Oggi** (overdue + due-today).
+- Commands: open list, open sidebar, quick-add, **Oggi** (overdue + due-today), and **Prossimi** (opens the list in the day-by-day Agenda grouping).
 - **Agent / plugin API** at `app.plugins.plugins.runway.api`: `allTasks`, `query`, `overdue`, `today`, `createTask`, `completeTask`, `reschedule`, `setPriority`, `moveToNote`, `openForDay`. Sibling plugins (Horizon's "open the active day in Runway") and Exo drive tasks through it.
 
 ## Scope

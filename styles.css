@@ -466,6 +466,43 @@
   text-align: center;
 }
 
+/* ── Agenda grouping (per-day buckets) ───────────────────────────────── */
+
+/* Faint tabular date next to the day word ("Today  6 Jul"); disambiguates
+   two same-weekday buckets inside the horizon. */
+.runway-group__sub {
+  font-size: var(--font-ui-smaller);
+  /* Muted, not faint: the date outranks the count in the header hierarchy and
+     needs to stay legible against dark themes. */
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
+  flex-shrink: 0;
+}
+
+/* Overdue: the whole bucket reads red, calmly — no fill, no stripe. */
+.runway-group--overdue .runway-group__title {
+  color: var(--color-red);
+}
+
+.runway-group--overdue .runway-group__count {
+  color: var(--color-red);
+  opacity: 0.72;
+}
+
+/* Today: keep the title bright (hierarchy must survive monochrome-accent themes,
+   where --text-accent goes near-gray) and mark "now" with a semantic due-dot. */
+.runway-group--today .runway-group__title::before {
+  content: '';
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-right: var(--size-2-2);
+  border-radius: 50%;
+  background-color: var(--color-orange);
+  vertical-align: middle;
+}
+
 /* ── Custom checkbox (horizon chip__check DNA) ───────────────────────── */
 
 .runway-row__check {

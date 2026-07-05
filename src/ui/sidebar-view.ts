@@ -10,7 +10,8 @@ export const VIEW_TYPE_SIDEBAR = 'runway-sidebar';
 /**
  * Right-dock task panel: the shared TaskPanel at compact density. Same
  * filtering, grouping and accordion behavior as the full page — it defaults
- * to date grouping with the far buckets collapsed, so it reads as a glance.
+ * to the day-by-day Agenda grouping with the far buckets collapsed, so it
+ * reads as a glance of what's due now and next.
  */
 export class RunwaySidebarView extends ItemView {
   private readonly ctx: RunwayContext;
@@ -59,8 +60,8 @@ export class RunwaySidebarView extends ItemView {
     this.panel?.unmount();
     this.contentEl.empty();
     const initial: Partial<TaskPanelState> = {
-      group: 'date',
-      collapsed: ['d-later', 'zz-none'],
+      group: 'agenda',
+      collapsed: ['y-later', 'zz-none'],
       ...this.pending,
     };
     this.panel = new TaskPanel(this.contentEl, this.ctx, initial, {

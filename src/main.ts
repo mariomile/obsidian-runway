@@ -65,6 +65,18 @@ export default class RunwayPlugin extends Plugin {
           group: 'date',
         }),
     });
+    this.addCommand({
+      id: 'open-upcoming',
+      name: 'Prossimi (agenda giorno per giorno)',
+      callback: () =>
+        void this.openListView({
+          filter: { ...structuredClone(DEFAULT_FILTER) },
+          sort: 'due',
+          group: 'agenda',
+          // Far buckets folded so the near days lead; the panel re-seeds these too.
+          collapsed: ['y-later', 'zz-none'],
+        }),
+    });
 
     this.setupStatusBar();
     this.addSettingTab(new RunwaySettingTab(this.app, this));

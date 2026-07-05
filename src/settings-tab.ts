@@ -63,6 +63,20 @@ export class RunwaySettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
+      .setName('Orizzonte Agenda')
+      .setDesc('Giorni futuri mostrati come bucket singoli nel raggruppamento Agenda, prima di "Later".')
+      .addSlider((slider) =>
+        slider
+          .setLimits(1, 60, 1)
+          .setValue(this.plugin.settings.agendaHorizonDays)
+          .setDynamicTooltip()
+          .onChange(async (value) => {
+            this.plugin.settings.agendaHorizonDays = value;
+            await this.plugin.saveSettings();
+          }),
+      );
+
+    new Setting(containerEl)
       .setName('Cartella daily note')
       .setDesc('Destinazione di default del quick-add.')
       .addText((text) =>
@@ -112,6 +126,7 @@ export class RunwaySettingTab extends PluginSettingTab {
             note: 'Per nota',
             none: 'Nessuno',
             date: 'Per data',
+            agenda: 'Agenda',
             priority: 'Per priorità',
             tag: 'Per tag',
             folder: 'Per cartella',
