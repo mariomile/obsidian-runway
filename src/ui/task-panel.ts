@@ -33,13 +33,13 @@ function submenuOf(item: MenuItem): Menu {
 
 const PAGE_SIZE = 200;
 
-/** Prominent time views — the primary way to slice the list. */
+/** Prominent time views (Craft-style) — the primary way to slice the list.
+   "Oggi" folds in overdue; the date grouping still shows an Overdue bucket. */
 const DUE_SEGMENTS: [DueFilter, string][] = [
-  ['all', 'Tutti'],
   ['today', 'Oggi'],
-  ['week', 'Settimana'],
-  ['overdue', 'In ritardo'],
+  ['upcoming', 'Prossimi'],
   ['none', 'Senza data'],
+  ['all', 'Tutti'],
 ];
 
 const STATUS_OPTIONS: [TaskStatus, string][] = [

@@ -96,14 +96,20 @@
   gap: 4px;
 }
 
+/* Compact: equal-width segments filling the sidebar on one row */
 .runway-panel--compact .runway-segments {
-  padding: 2px;
+  display: flex;
+  width: 100%;
   gap: 1px;
 }
 
 .runway-panel--compact .runway-segment {
+  flex: 1;
   height: 24px;
-  padding: 0 9px;
+  padding: 0 4px;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .runway-panel--compact .runway-fchip,
@@ -250,10 +256,9 @@
   margin-left: auto;
 }
 
-/* Time segments — the primary, prominent list slicer */
+/* Time segments — the primary list slicer (Craft-style segmented control) */
 .runway-segments {
   display: inline-flex;
-  flex-wrap: wrap;
   gap: 2px;
   padding: 2px;
   border-radius: var(--radius-m);
@@ -264,18 +269,18 @@
   height: 26px;
   padding: 0 12px;
   border: none;
-  border-radius: var(--radius-s);
+  border-radius: calc(var(--radius-m) - 2px);
   background: transparent;
   color: var(--text-muted);
   font-size: var(--font-ui-smaller);
+  white-space: nowrap;
   box-shadow: none;
   cursor: var(--cursor);
   transition: background-color var(--runway-t), color var(--runway-t);
 }
 
-.runway-segment:hover {
+.runway-segment:hover:not(.is-active) {
   color: var(--text-normal);
-  background: var(--background-modifier-hover);
 }
 
 .runway-segment.is-active {

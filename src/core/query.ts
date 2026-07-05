@@ -54,6 +54,8 @@ function matchesDue(task: Task, due: TaskFilter['due'], today: DayKey): boolean 
       return date !== undefined && compareDayKeys(date, today) <= 0;
     case 'week':
       return date !== undefined && compareDayKeys(date, addDays(today, 7)) <= 0;
+    case 'upcoming':
+      return date !== undefined && compareDayKeys(date, today) > 0;
   }
 }
 

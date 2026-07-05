@@ -55,7 +55,7 @@ export interface Task extends ParsedTask {
   note?: string;
 }
 
-export type DueFilter = 'all' | 'overdue' | 'today' | 'week' | 'none';
+export type DueFilter = 'all' | 'overdue' | 'today' | 'week' | 'upcoming' | 'none';
 
 export interface TaskFilter {
   /** Free text, all terms must match (description + path + tags). */
