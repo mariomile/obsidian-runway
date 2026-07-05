@@ -1,4 +1,4 @@
-import { ItemView } from 'obsidian';
+import { ItemView, Platform } from 'obsidian';
 import type { ViewStateResult, WorkspaceLeaf } from 'obsidian';
 
 import { TaskPanel } from './task-panel.ts';
@@ -55,7 +55,9 @@ export class RunwayListView extends ItemView {
     this.panel?.unmount();
     this.contentEl.empty();
     this.panel = new TaskPanel(this.contentEl, this.ctx, this.pending, {
-      compact: false,
+      // On a phone the full-page view is a narrow column — use the dense,
+      // equal-width-segments layout, same as the sidebar.
+      compact: Platform.isPhone,
       title: 'Runway',
       onStateChange: () => this.app.workspace.requestSaveLayout(),
     });
