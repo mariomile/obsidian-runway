@@ -183,16 +183,9 @@ export class TaskPanel {
     const root = this.container;
     root.empty();
 
+    // No title or divider — the tab already reads "Runway"; keep it light.
+    this.countEl = null;
     const header = root.createDiv({ cls: 'runway-panel__header' });
-    // The sidebar tab already reads "Runway"; a title here only adds weight.
-    if (!this.options.compact) {
-      const titleGroup = header.createDiv({ cls: 'runway-panel__titlegroup' });
-      titleGroup.createEl('h2', { cls: 'runway-panel__title', text: this.options.title });
-      this.countEl = titleGroup.createSpan({ cls: 'runway-panel__count' });
-    } else {
-      this.countEl = null;
-    }
-
     const actions = header.createDiv({ cls: 'runway-panel__actions' });
 
     const searchWrap = actions.createDiv({ cls: 'runway-search' });
@@ -291,25 +284,41 @@ export class TaskPanel {
     filterChip.addEventListener('click', (event) => this.openFiltersMenu(event));
 
     const controlEnd = controlRow.createDiv({ cls: 'runway-filterbar__end' });
-    this.chip(controlEnd, {
-      icon: 'arrow-up-down',
-      label: shortLabel(SORT_OPTIONS, this.state.sort),
-      options: SORT_OPTIONS,
-      current: this.state.sort,
-      onPick: (value) =>
-        this.update(() => {
-          this.state.sort = value;
-        }),
-    });
-    this.chip(controlEnd, {
-      icon: 'layout-list',
-      label: shortLabel(GROUP_OPTIONS, this.state.group),
-      options: GROUP_OPTIONS,
-      current: this.state.group,
-      onPick: (value) =>
-        this.update(() => {
-          this.state.group = value;
-        }),
+    this.iconMenu(controlEnd, 'arrow-up-down', 'Ordina', SORT_OPTIONS, this.state.sort, (value) =>
+      this.update(() => {
+        this.state.sort = value;
+      }),
+    );
+    this.iconMenu(controlEnd, 'layout-list', 'Raggruppa', GROUP_OPTIONS, this.state.group, (value) =>
+      this.update(() => {
+        this.state.group = value;
+      }),
+    );
+  }
+
+  /** Icon-only button opening a single-select menu (sort / group). */
+  private iconMenu<T extends string>(
+    parent: HTMLElement,
+    icon: string,
+    label: string,
+    options: readonly [T, string][],
+    current: T,
+    onPick: (value: T) => void,
+  ): void {
+    const button = parent.createEl('button', { cls: 'runway-iconbtn' });
+    setIcon(button, icon);
+    button.setAttribute('aria-label', `${label}: ${shortLabel(options, current)}`);
+    button.addEventListener('click', (event) => {
+      const menu = new Menu();
+      for (const [value, optionLabel] of options) {
+        menu.addItem((item) =>
+          item
+            .setTitle(optionLabel)
+            .setChecked(value === current)
+            .onClick(() => onPick(value)),
+        );
+      }
+      menu.showAtMouseEvent(event);
     });
   }
 
@@ -464,46 +473,6 @@ export class TaskPanel {
     }
 
     menu.showAtMouseEvent(event);
-  }
-
-  private chip<T extends string>(
-    parent: HTMLElement,
-    config: {
-      label: string;
-      options: readonly [T, string][];
-      current: T;
-      onPick: (value: T) => void;
-      icon?: string;
-      active?: boolean;
-      emptyNote?: string;
-    },
-  ): void {
-    const chip = parent.createEl('button', {
-      cls: `runway-fchip${config.active ? ' is-active' : ''}`,
-    });
-    if (config.icon) {
-      const icon = chip.createSpan({ cls: 'runway-fchip__icon' });
-      setIcon(icon, config.icon);
-    }
-    chip.createSpan({ cls: 'runway-fchip__label', text: config.label });
-    const caret = chip.createSpan({ cls: 'runway-fchip__caret' });
-    setIcon(caret, 'chevron-down');
-    chip.addEventListener('click', (event) => {
-      const menu = new Menu();
-      const selectable = config.options.filter(([value]) => !config.emptyNote || value !== '');
-      if (config.emptyNote && selectable.length === 0) {
-        menu.addItem((item) => item.setTitle(config.emptyNote as string).setDisabled(true));
-      }
-      for (const [value, label] of config.options) {
-        menu.addItem((item) =>
-          item
-            .setTitle(label)
-            .setChecked(value === config.current)
-            .onClick(() => config.onPick(value)),
-        );
-      }
-      menu.showAtMouseEvent(event);
-    });
   }
 
   private facets(): { tags: string[]; folders: string[] } {

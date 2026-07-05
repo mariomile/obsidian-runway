@@ -24,31 +24,9 @@
 
 .runway-panel__header {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  gap: var(--size-2-3) var(--size-4-2);
+  gap: 6px;
   flex-shrink: 0;
-}
-
-.runway-panel__titlegroup {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  flex: 0 0 auto;
-}
-
-.runway-panel__title {
-  margin: 0;
-  font-family: var(--font-interface);
-  font-weight: 700;
-  color: var(--text-normal);
-}
-
-.runway-panel__count {
-  color: var(--text-muted);
-  font-size: var(--font-ui-smaller);
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
 }
 
 .runway-panel__actions {
@@ -60,36 +38,16 @@
   justify-content: flex-end;
 }
 
-/* Full page: big masonry-style title + bottom-bordered header. */
+/* Full page: titleless, no divider, centered column. */
 .runway-panel:not(.runway-panel--compact) {
   padding: var(--size-4-4) clamp(16px, 2.2vw, 32px) var(--size-4-2);
   max-width: var(--file-line-width, 46em);
   margin: 0 auto;
 }
 
-.runway-panel:not(.runway-panel--compact) .runway-panel__header {
-  padding-bottom: var(--size-4-3);
-  border-bottom: 1px solid var(--background-modifier-border);
-}
-
-.runway-panel:not(.runway-panel--compact) .runway-panel__title {
-  font-size: clamp(1.25rem, 1.05rem + 0.8vw, 1.7rem);
-  letter-spacing: -0.035em;
-  line-height: 1.15;
-}
-
-/* Compact sidebar: titleless, dense — just search + actions, then filters. */
+/* Compact sidebar: dense — search + actions, then filters. */
 .runway-panel--compact {
   padding: 6px 8px 12px;
-}
-
-.runway-panel--compact .runway-panel__header {
-  padding: 0 0 6px;
-}
-
-.runway-panel--compact .runway-panel__filters {
-  gap: 6px;
-  padding: 4px 0 6px;
 }
 
 .runway-panel--compact .runway-filterbar__row {
@@ -237,8 +195,8 @@
 .runway-panel__filters {
   display: flex;
   flex-direction: column;
-  gap: var(--size-2-2);
-  padding: var(--size-4-2) 0 var(--size-2-3);
+  gap: var(--size-4-2);
+  padding: var(--size-4-3) 0 var(--size-4-2);
   flex-shrink: 0;
 }
 
@@ -246,13 +204,13 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
 }
 
 .runway-filterbar__end {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 2px;
   margin-left: auto;
 }
 
@@ -397,7 +355,7 @@
   display: flex;
   align-items: center;
   gap: var(--size-2-2);
-  padding: var(--size-2-2) var(--size-2-2);
+  padding: var(--size-2-3) var(--size-2-2);
   border-radius: var(--radius-s);
   cursor: var(--cursor);
   user-select: none;
@@ -412,15 +370,15 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 14px;
+  width: 16px;
   flex-shrink: 0;
   color: var(--text-faint);
   transition: transform 120ms ease;
 }
 
 .runway-group__chevron .svg-icon {
-  width: 14px;
-  height: 14px;
+  width: 16px;
+  height: 16px;
 }
 
 .runway-group:not(.is-collapsed) > .runway-group__head .runway-group__chevron {
@@ -428,9 +386,9 @@
 }
 
 .runway-group__title {
-  font-size: var(--font-ui-small);
-  font-weight: 600;
-  color: var(--text-muted);
+  font-size: var(--font-ui-medium);
+  font-weight: var(--font-semibold);
+  color: var(--text-normal);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -441,7 +399,7 @@
 }
 
 .runway-group__count {
-  font-size: var(--font-ui-smaller);
+  font-size: var(--font-ui-small);
   color: var(--text-faint);
   font-variant-numeric: tabular-nums;
   flex-shrink: 0;
@@ -879,6 +837,42 @@
 
 .runway-statusbar__count {
   font-variant-numeric: tabular-nums;
+}
+
+/* ── Touch / mobile ──────────────────────────────────────────────────── */
+
+/* No hover on touch: reveal row/group actions and give them tap targets. */
+.is-mobile .runway-row__more,
+.is-mobile .runway-group__act {
+  opacity: 1;
+}
+
+.is-mobile .runway-row {
+  padding: 8px var(--size-2-2);
+}
+
+.is-mobile .runway-row__check,
+.is-mobile .runway-row__more,
+.is-mobile .runway-group__act {
+  width: 28px;
+  height: 28px;
+}
+
+.is-mobile .runway-segment,
+.is-mobile .runway-fchip,
+.is-mobile .runway-iconbtn,
+.is-mobile .runway-pill {
+  min-height: 32px;
+}
+
+.is-mobile .runway-panel .runway-search__input {
+  height: 34px;
+}
+
+/* On a phone the full-page list is the whole screen — let it use the width. */
+.is-phone .runway-panel:not(.runway-panel--compact) {
+  padding: var(--size-4-2) var(--size-4-2) var(--size-4-2);
+  max-width: none;
 }
 
 /* ── Reduced motion ──────────────────────────────────────────────────── */
