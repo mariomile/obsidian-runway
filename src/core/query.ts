@@ -1,4 +1,4 @@
-import { addDays, compareDayKeys } from '../dates.ts';
+import { addDays, agendaDayLabel, compareDayKeys } from '../dates.ts';
 import { normalizeText } from '../utils.ts';
 import type {
   DayKey,
@@ -123,11 +123,17 @@ export function sortTasks(tasks: Task[], sort: TaskSort): Task[] {
 interface GroupSpec {
   key: string;
   label: string;
+  sublabel?: string;
 }
+
+/** Fallback horizon for the Agenda grouping when the caller passes none. */
+export const DEFAULT_AGENDA_HORIZON = 14;
 
 export interface QueryOptions {
   /** Folder prefixes whose tasks land in the pinned Inbox bucket of the note grouping. */
   inboxFolders?: string[];
+  /** Days ahead the Agenda grouping keeps per-day before folding into "Later". */
+  agendaHorizonDays?: number;
 }
 
 function isInboxPath(path: string, inboxFolders: string[]): boolean {
@@ -168,6 +174,24 @@ function dateGroup(task: Task, today: DayKey): GroupSpec {
   return { key: 'd-later', label: 'Later' };
 }
 
+/**
+ * One bucket per calendar day from today to today+horizon, with past-due folded
+ * into a single Overdue bucket up top and anything beyond the horizon into
+ * "Later". Keys sort chronologically: `a-overdue` < `b-<ISO>` (ISO days sort
+ * lexically) < `y-later` < `zz-none`, so empty days simply never produce a
+ * bucket. The day label is split into a primary word + a faint date sublabel.
+ */
+function agendaGroup(task: Task, today: DayKey, horizonDays: number): GroupSpec {
+  const date = taskDate(task);
+  if (date === undefined) return { key: 'zz-none', label: 'No date' };
+  if (compareDayKeys(date, today) < 0) return { key: 'a-overdue', label: 'Overdue' };
+  if (compareDayKeys(date, addDays(today, horizonDays)) > 0) {
+    return { key: 'y-later', label: 'Later' };
+  }
+  const { primary, secondary } = agendaDayLabel(date, today);
+  return { key: `b-${date}`, label: primary, sublabel: secondary };
+}
+
 function groupSpec(
   task: Task,
   group: TaskGroup,
@@ -181,6 +205,8 @@ function groupSpec(
       return noteGroup(task, options.inboxFolders ?? []);
     case 'date':
       return dateGroup(task, today);
+    case 'agenda':
+      return agendaGroup(task, today, options.agendaHorizonDays ?? DEFAULT_AGENDA_HORIZON);
     case 'priority': {
       const priority = task.priority;
       return priority === null
@@ -215,7 +241,7 @@ export function queryTasks(
     const spec = groupSpec(task, group, today, options);
     let bucket = groups.get(spec.key);
     if (!bucket) {
-      bucket = { key: spec.key, label: spec.label, tasks: [] };
+      bucket = { key: spec.key, label: spec.label, sublabel: spec.sublabel, tasks: [] };
       groups.set(spec.key, bucket);
     }
     bucket.tasks.push(task);

@@ -114,6 +114,48 @@ test('group by date produces ordered buckets', () => {
   );
 });
 
+test('group by agenda: per-day buckets, overdue first, later folded, no empty days', () => {
+  const groups = queryTasks(TASKS, DEFAULT_FILTER, 'due', 'agenda', TODAY, {
+    agendaHorizonDays: 14,
+  });
+  assert.deepEqual(
+    groups.map((group) => group.key),
+    ['a-overdue', 'b-2026-07-03', 'b-2026-07-08', 'y-later', 'zz-none'],
+  );
+  const byKey = new Map(groups.map((group) => [group.key, group]));
+  assert.equal(byKey.get('a-overdue')?.label, 'Overdue');
+  assert.equal(byKey.get('b-2026-07-03')?.label, 'Today');
+  assert.equal(byKey.get('b-2026-07-03')?.sublabel, '3 Jul');
+  // Due-today and in-progress-today share the same day bucket.
+  assert.deepEqual(
+    byKey.get('b-2026-07-03')?.tasks.map((task) => task.description).sort(),
+    ['Due today', 'In progress'],
+  );
+  assert.equal(byKey.get('b-2026-07-08')?.label, 'Wed');
+  assert.equal(byKey.get('b-2026-07-08')?.sublabel, '8 Jul');
+  assert.equal(byKey.get('y-later')?.label, 'Later');
+  assert.equal(byKey.get('zz-none')?.label, 'No date');
+});
+
+test('group by agenda: horizon controls the Later cutoff', () => {
+  // Horizon 3 → 2026-07-08 (5 days out) folds into Later instead of a day bucket.
+  const groups = queryTasks(TASKS, DEFAULT_FILTER, 'due', 'agenda', TODAY, {
+    agendaHorizonDays: 3,
+  });
+  const keys = groups.map((group) => group.key);
+  assert.ok(!keys.includes('b-2026-07-08'));
+  assert.deepEqual(
+    groups.find((group) => group.key === 'y-later')?.tasks.map((task) => task.description).sort(),
+    ['Due next week #deepagent', 'Later'],
+  );
+});
+
+test('group by agenda: falls back to a 14-day horizon when unspecified', () => {
+  const groups = queryTasks(TASKS, DEFAULT_FILTER, 'due', 'agenda', TODAY);
+  // 2026-07-08 is within 14 days → still its own bucket.
+  assert.ok(groups.some((group) => group.key === 'b-2026-07-08'));
+});
+
 test('group by folder uses the full subfolder path', () => {
   const byFolder = queryTasks(TASKS, DEFAULT_FILTER, 'due', 'folder', TODAY);
   assert.deepEqual(

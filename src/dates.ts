@@ -75,3 +75,36 @@ export function daysBetween(a: DayKey, b: DayKey): number {
 export function compareDayKeys(a: DayKey, b: DayKey): number {
   return a < b ? -1 : a > b ? 1 : 0;
 }
+
+// Fixed English tables — no `Intl`, so agenda labels are byte-deterministic in
+// tests and identical across the user's locale. Sunday-indexed to match getDay().
+const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const MONTHS = [
+  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+];
+
+/** Weekday index (0 = Sunday) for a calendar day. */
+export function dayOfWeek(key: DayKey): number {
+  const { y, m, d } = mustParse(key);
+  return new Date(y, m - 1, d).getDay();
+}
+
+/**
+ * Two-part label for an Agenda day bucket, relative to `today`.
+ * `primary` is the scannable word/weekday ("Today" / "Tomorrow" / "Wed"),
+ * `secondary` the faint tabular date ("6 Jul") that disambiguates repeats
+ * (two Wednesdays inside a 14-day horizon share a primary, differ on date).
+ */
+export function agendaDayLabel(
+  key: DayKey,
+  today: DayKey,
+): { primary: string; secondary: string } {
+  const { m, d } = mustParse(key);
+  // Indices are exhaustive: mustParse guarantees m∈1..12, getDay() returns 0..6.
+  const secondary = `${d} ${MONTHS[m - 1]!}`;
+  const diff = daysBetween(today, key);
+  if (diff === 0) return { primary: 'Today', secondary };
+  if (diff === 1) return { primary: 'Tomorrow', secondary };
+  return { primary: WEEKDAYS[dayOfWeek(key)]!, secondary };
+}

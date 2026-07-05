@@ -72,11 +72,15 @@ const SORT_OPTIONS: [TaskSort, string][] = [
 const GROUP_OPTIONS: [TaskGroup, string][] = [
   ['note', 'Nota'],
   ['date', 'Data'],
+  ['agenda', 'Agenda'],
   ['priority', 'Priorità'],
   ['tag', 'Tag'],
   ['folder', 'Cartella'],
   ['none', 'Niente'],
 ];
+
+/** Agenda's far buckets open collapsed — the near days are what you glance at. */
+const AGENDA_FAR_KEYS = ['y-later', 'zz-none'];
 
 const PRIORITY_OPTIONS: [string, string][] = [
   ['', 'Priorità'],
@@ -153,6 +157,9 @@ export class TaskPanel {
       collapsed: initial.collapsed ?? [],
     };
     this.collapsed = new Set(this.state.collapsed);
+    // Default-group agenda (from settings) with no saved collapse state gets the
+    // far buckets folded, matching the explicit switch and the Upcoming command.
+    if (this.state.group === 'agenda' && this.collapsed.size === 0) this.seedAgendaCollapse();
   }
 
   mount(): void {
@@ -292,6 +299,7 @@ export class TaskPanel {
     this.iconMenu(controlEnd, 'layout-list', 'Raggruppa', GROUP_OPTIONS, this.state.group, (value) =>
       this.update(() => {
         this.state.group = value;
+        if (value === 'agenda') this.seedAgendaCollapse();
       }),
     );
   }
@@ -506,7 +514,10 @@ export class TaskPanel {
       this.state.sort,
       this.state.group,
       todayKey(),
-      { inboxFolders: this.ctx.settings.inboxFolders },
+      {
+        inboxFolders: this.ctx.settings.inboxFolders,
+        agendaHorizonDays: this.ctx.settings.agendaHorizonDays,
+      },
     );
     for (const group of groups) {
       for (const task of group.tasks) this.taskByKey.set(taskKey(task), task);
@@ -536,8 +547,9 @@ export class TaskPanel {
       }
 
       const collapsed = this.collapsed.has(group.key);
+      const variant = this.state.group === 'agenda' ? this.agendaVariant(group.key) : '';
       const section = results.createDiv({
-        cls: `runway-group${isInbox ? ' runway-group--inbox' : ''}${collapsed ? ' is-collapsed' : ''}`,
+        cls: `runway-group${isInbox ? ' runway-group--inbox' : ''}${variant}${collapsed ? ' is-collapsed' : ''}`,
       });
 
       const head = section.createDiv({
@@ -547,6 +559,7 @@ export class TaskPanel {
       const chevron = head.createSpan({ cls: 'runway-group__chevron' });
       setIcon(chevron, 'chevron-right');
       head.createSpan({ cls: 'runway-group__title', text: group.label });
+      if (group.sublabel) head.createSpan({ cls: 'runway-group__sub', text: group.sublabel });
       head.createSpan({ cls: 'runway-group__count', text: String(group.tasks.length) });
 
       const notePath = group.tasks[0]?.path;
@@ -828,6 +841,7 @@ export class TaskPanel {
     this.state.group = view.group;
     this.expanded.clear();
     this.collapsed.clear();
+    if (view.group === 'agenda') this.seedAgendaCollapse();
     this.selection.clear();
     this.cursor = -1;
     this.options.onStateChange();
@@ -849,6 +863,18 @@ export class TaskPanel {
       void this.ctx.saveSettings();
       new Notice(`Runway: vista "${name}" salvata.`);
     });
+  }
+
+  /** Accent modifier for an agenda bucket: red Overdue, accented Today. */
+  private agendaVariant(key: string): string {
+    if (key === 'a-overdue') return ' runway-group--overdue';
+    if (key === `b-${todayKey()}`) return ' runway-group--today';
+    return '';
+  }
+
+  /** Open the agenda's far buckets collapsed the first time they appear. */
+  private seedAgendaCollapse(): void {
+    for (const key of AGENDA_FAR_KEYS) this.collapsed.add(key);
   }
 
   private toggleAll(): void {

@@ -75,11 +75,13 @@ export interface TaskFilter {
 
 export type TaskSort = 'due' | 'priority' | 'path';
 
-export type TaskGroup = 'none' | 'note' | 'date' | 'priority' | 'tag' | 'folder';
+export type TaskGroup = 'none' | 'note' | 'date' | 'agenda' | 'priority' | 'tag' | 'folder';
 
 export interface TaskGroupResult {
   key: string;
   label: string;
+  /** Faint secondary line (agenda day date, e.g. "6 Jul"); presentation hint. */
+  sublabel?: string;
   tasks: Task[];
 }
 
@@ -99,6 +101,8 @@ export interface RunwaySettings {
   savedViews: SavedView[];
   /** Days ahead shown in the sidebar Upcoming section. */
   sidebarUpcomingDays: number;
+  /** Days ahead the Agenda grouping renders as per-day buckets before "Later". */
+  agendaHorizonDays: number;
   /** Daily note folder for quick-add default target. */
   dailyFolder: string;
   /** Daily note filename format using DD/MM/YYYY tokens. */

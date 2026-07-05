@@ -7,6 +7,7 @@ export const DEFAULT_SETTINGS: RunwaySettings = {
   inboxFolders: ['_inbox', 'Journal/Daily'],
   savedViews: [],
   sidebarUpcomingDays: 7,
+  agendaHorizonDays: 14,
   dailyFolder: 'Journal/Daily',
   dailyFormat: 'DD-MM-YYYY',
   quickAddHeading: '',
@@ -15,7 +16,7 @@ export const DEFAULT_SETTINGS: RunwaySettings = {
 };
 
 const SORTS: readonly TaskSort[] = ['due', 'priority', 'path'];
-const GROUPS: readonly TaskGroup[] = ['none', 'note', 'date', 'priority', 'tag', 'folder'];
+const GROUPS: readonly TaskGroup[] = ['none', 'note', 'date', 'agenda', 'priority', 'tag', 'folder'];
 
 function parseSavedViews(value: unknown): SavedView[] {
   if (!Array.isArray(value)) return [];
@@ -43,6 +44,12 @@ export function parseSettings(data: unknown): RunwaySettings {
       DEFAULT_SETTINGS.sidebarUpcomingDays,
       0,
       31,
+    ),
+    agendaHorizonDays: boundedNumber(
+      data.agendaHorizonDays,
+      DEFAULT_SETTINGS.agendaHorizonDays,
+      1,
+      60,
     ),
     dailyFolder: stringValue(data.dailyFolder, DEFAULT_SETTINGS.dailyFolder),
     dailyFormat: stringValue(data.dailyFormat, DEFAULT_SETTINGS.dailyFormat),
