@@ -184,12 +184,14 @@ export class TaskPanel {
     root.empty();
 
     const header = root.createDiv({ cls: 'runway-panel__header' });
-    const titleGroup = header.createDiv({ cls: 'runway-panel__titlegroup' });
-    titleGroup.createEl(this.options.compact ? 'span' : 'h2', {
-      cls: 'runway-panel__title',
-      text: this.options.title,
-    });
-    this.countEl = titleGroup.createSpan({ cls: 'runway-panel__count' });
+    // The sidebar tab already reads "Runway"; a title here only adds weight.
+    if (!this.options.compact) {
+      const titleGroup = header.createDiv({ cls: 'runway-panel__titlegroup' });
+      titleGroup.createEl('h2', { cls: 'runway-panel__title', text: this.options.title });
+      this.countEl = titleGroup.createSpan({ cls: 'runway-panel__count' });
+    } else {
+      this.countEl = null;
+    }
 
     const actions = header.createDiv({ cls: 'runway-panel__actions' });
 

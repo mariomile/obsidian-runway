@@ -78,21 +78,37 @@
   line-height: 1.15;
 }
 
-/* Compact sidebar: small tracked-uppercase header (superbasetags DNA). */
+/* Compact sidebar: titleless, dense — just search + actions, then filters. */
 .runway-panel--compact {
-  padding: 8px 8px 12px;
-}
-
-.runway-panel--compact .runway-panel__title {
-  font-size: var(--font-ui-smaller);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  font-weight: var(--font-semibold);
-  color: var(--text-faint);
+  padding: 6px 8px 12px;
 }
 
 .runway-panel--compact .runway-panel__header {
-  padding: 2px 2px 8px;
+  padding: 0 0 6px;
+}
+
+.runway-panel--compact .runway-panel__filters {
+  gap: 6px;
+  padding: 4px 0 6px;
+}
+
+.runway-panel--compact .runway-filterbar__row {
+  gap: 4px;
+}
+
+.runway-panel--compact .runway-segments {
+  padding: 2px;
+  gap: 1px;
+}
+
+.runway-panel--compact .runway-segment {
+  height: 24px;
+  padding: 0 9px;
+}
+
+.runway-panel--compact .runway-fchip,
+.runway-panel--compact .runway-search__input {
+  height: 28px;
 }
 
 /* ── Icon buttons + add ──────────────────────────────────────────────── */
