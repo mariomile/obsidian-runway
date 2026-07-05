@@ -50,6 +50,12 @@ test('due presets', () => {
 
   const none = TASKS.filter((task) => matchesTask(task, filter({ due: 'none' }), TODAY));
   assert.deepEqual(none.map((task) => task.description), ['No date #captoo']);
+
+  const upcoming = TASKS.filter((task) => matchesTask(task, filter({ due: 'upcoming' }), TODAY));
+  assert.deepEqual(upcoming.map((task) => task.description).sort(), [
+    'Due next week #deepagent',
+    'Later',
+  ]);
 });
 
 test('tag filter matches exact and namespace prefix', () => {
