@@ -55,7 +55,7 @@ Everything writes back to the source note through a guarded line edit — the wr
 
 ## Scope
 
-The whole vault is indexed except `.obsidian/` and the folders listed in **Settings → Cartelle escluse** (default: `.archive`, `.claude`, `_system`, `Resources/Templates`). Tasks inside callouts and code blocks are not indexed (they are invisible to Obsidian's list-item cache).
+The whole vault is indexed except `.obsidian/` and the folders listed in **Settings → Cartelle escluse** (default: `.archive`). Tasks inside callouts and code blocks are not indexed (they are invisible to Obsidian's list-item cache).
 
 ## Development
 

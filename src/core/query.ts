@@ -34,7 +34,7 @@ function priorityRank(priority: Priority | null): number {
 
 /**
  * The date a task "lives on": the 📅 due date, else the ⏳ scheduled date.
- * Mario's vault schedules far more than it deadlines — date-driven views
+ * Date-driven vaults often schedule more work than they deadline — views
  * would be empty if they looked at 📅 alone.
  */
 export function taskDate(task: Task): DayKey | undefined {

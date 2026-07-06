@@ -3,13 +3,13 @@ import { boundedNumber } from './utils.ts';
 import type { RunwaySettings, SavedView, TaskFilter, TaskGroup, TaskSort } from './types.ts';
 
 export const DEFAULT_SETTINGS: RunwaySettings = {
-  excludeFolders: ['.archive', '.claude', '_system', 'Resources/Templates'],
-  inboxFolders: ['_inbox', 'Journal/Daily'],
+  excludeFolders: ['.archive'],
+  inboxFolders: ['_inbox'],
   savedViews: [],
   sidebarUpcomingDays: 7,
   agendaHorizonDays: 14,
-  dailyFolder: 'Journal/Daily',
-  dailyFormat: 'DD-MM-YYYY',
+  dailyFolder: '',
+  dailyFormat: 'YYYY-MM-DD',
   quickAddHeading: '',
   defaultSort: 'due',
   defaultGroup: 'note',

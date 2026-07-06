@@ -15,14 +15,14 @@ function makeTask(line: string, path = 'Active/Projects/Test/note.md', lineNo = 
 }
 
 const TASKS: Task[] = [
-  makeTask('- [ ] Overdue task 📅 2026-06-30', 'Active/Projects/Exo/note.md', 1),
-  makeTask('- [ ] Due today ⏫ 📅 2026-07-03', 'Active/Projects/Exo/note.md', 2),
-  makeTask('- [ ] Due next week 📅 2026-07-08 #deepagent', 'Journal/Daily/03-07-2026.md', 3),
+  makeTask('- [ ] Overdue task 📅 2026-06-30', 'Projects/Alpha/note.md', 1),
+  makeTask('- [ ] Due today ⏫ 📅 2026-07-03', 'Projects/Alpha/note.md', 2),
+  makeTask('- [ ] Due next week 📅 2026-07-08 #project', 'Daily/2026-07-03.md', 3),
   makeTask('- [ ] Later 📅 2026-08-01', 'Resources/Books/book.md', 4),
-  makeTask('- [ ] No date 🔺 #captoo', 'Active/Projects/Captoo/note.md', 5),
-  makeTask('- [x] Done ✅ 2026-07-01 📅 2026-07-01', 'Journal/Daily/01-07-2026.md', 6),
-  makeTask('- [/] In progress 📅 2026-07-03', 'Active/Projects/Exo/note.md', 7),
-  makeTask('- [-] Cancelled', 'Active/Projects/Exo/note.md', 8),
+  makeTask('- [ ] No date 🔺 #personal', 'Projects/Beta/note.md', 5),
+  makeTask('- [x] Done ✅ 2026-07-01 📅 2026-07-01', 'Daily/2026-07-01.md', 6),
+  makeTask('- [/] In progress 📅 2026-07-03', 'Projects/Alpha/note.md', 7),
+  makeTask('- [-] Cancelled', 'Projects/Alpha/note.md', 8),
 ];
 
 function filter(overrides: Partial<TaskFilter>): TaskFilter {
@@ -49,18 +49,18 @@ test('due presets', () => {
   assert.equal(week.length, 4);
 
   const none = TASKS.filter((task) => matchesTask(task, filter({ due: 'none' }), TODAY));
-  assert.deepEqual(none.map((task) => task.description), ['No date #captoo']);
+  assert.deepEqual(none.map((task) => task.description), ['No date #personal']);
 
   const upcoming = TASKS.filter((task) => matchesTask(task, filter({ due: 'upcoming' }), TODAY));
   assert.deepEqual(upcoming.map((task) => task.description).sort(), [
-    'Due next week #deepagent',
+    'Due next week #project',
     'Later',
   ]);
 });
 
 test('tag filter matches exact and namespace prefix', () => {
-  const tagged = TASKS.filter((task) => matchesTask(task, filter({ tags: ['#captoo'] }), TODAY));
-  assert.deepEqual(tagged.map((task) => task.description), ['No date #captoo']);
+  const tagged = TASKS.filter((task) => matchesTask(task, filter({ tags: ['#personal'] }), TODAY));
+  assert.deepEqual(tagged.map((task) => task.description), ['No date #personal']);
 
   const withNested = makeTask('- [ ] Nested tag #domain/product', 'Atlas/x.md', 9);
   assert.ok(matchesTask(withNested, filter({ tags: ['#domain'] }), TODAY));
@@ -69,7 +69,7 @@ test('tag filter matches exact and namespace prefix', () => {
 
 test('folder filter is a path prefix', () => {
   const active = TASKS.filter(
-    (task) => matchesTask(task, filter({ folder: 'Active/Projects/Exo' }), TODAY),
+    (task) => matchesTask(task, filter({ folder: 'Projects/Alpha' }), TODAY),
   );
   assert.equal(active.length, 3);
 });
@@ -84,7 +84,7 @@ test('priority filter excludes tasks without priority', () => {
   const high = TASKS.filter(
     (task) => matchesTask(task, filter({ priorities: ['high', 'highest'] }), TODAY),
   );
-  assert.deepEqual(high.map((task) => task.description).sort(), ['Due today', 'No date #captoo']);
+  assert.deepEqual(high.map((task) => task.description).sort(), ['Due today', 'No date #personal']);
 });
 
 test('sort by due puts undated last, priority breaks ties', () => {
@@ -94,7 +94,7 @@ test('sort by due puts undated last, priority breaks ties', () => {
   );
   assert.equal(sorted[0]?.description, 'Overdue task');
   assert.equal(sorted[1]?.description, 'Due today'); // ⏫ wins the 2026-07-03 tie
-  assert.equal(sorted[sorted.length - 1]?.description, 'No date #captoo');
+  assert.equal(sorted[sorted.length - 1]?.description, 'No date #personal');
 });
 
 test('sort by priority ranks highest first', () => {
@@ -102,7 +102,7 @@ test('sort by priority ranks highest first', () => {
     TASKS.filter((task) => matchesTask(task, DEFAULT_FILTER, TODAY)),
     'priority',
   );
-  assert.equal(sorted[0]?.description, 'No date #captoo'); // 🔺 highest
+  assert.equal(sorted[0]?.description, 'No date #personal'); // 🔺 highest
   assert.equal(sorted[1]?.description, 'Due today'); // ⏫ high
 });
 
@@ -146,7 +146,7 @@ test('group by agenda: horizon controls the Later cutoff', () => {
   assert.ok(!keys.includes('b-2026-07-08'));
   assert.deepEqual(
     groups.find((group) => group.key === 'y-later')?.tasks.map((task) => task.description).sort(),
-    ['Due next week #deepagent', 'Later'],
+    ['Due next week #project', 'Later'],
   );
 });
 
@@ -160,7 +160,7 @@ test('group by folder uses the full subfolder path', () => {
   const byFolder = queryTasks(TASKS, DEFAULT_FILTER, 'due', 'folder', TODAY);
   assert.deepEqual(
     byFolder.map((group) => group.label),
-    ['Active/Projects/Captoo', 'Active/Projects/Exo', 'Journal/Daily', 'Resources/Books'],
+    ['Daily', 'Projects/Alpha', 'Projects/Beta', 'Resources/Books'],
   );
 });
 
@@ -173,10 +173,10 @@ test('group by note pins Inbox first, then one bucket per note', () => {
   const withCaptures = [
     ...TASKS,
     makeTask('- [ ] Cattura volante', '_inbox/Clip.md', 20),
-    makeTask('- [ ] Task da daily', 'Journal/Daily/02-07-2026.md', 21),
+    makeTask('- [ ] Task da daily', 'Daily/2026-07-02.md', 21),
   ];
   const groups = queryTasks(withCaptures, DEFAULT_FILTER, 'due', 'note', TODAY, {
-    inboxFolders: ['_inbox', 'Journal/Daily'],
+    inboxFolders: ['_inbox', 'Daily'],
   });
   assert.equal(groups[0]?.label, 'Inbox');
   // Both captures + the daily-note task already in TASKS land in Inbox.

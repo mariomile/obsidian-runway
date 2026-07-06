@@ -4,15 +4,15 @@ import { test } from 'node:test';
 import { parseTaskLine } from './parse.ts';
 import { serializeTask } from './serialize.ts';
 
-/** Representative lines lifted from the real vault. */
+/** Synthetic fixtures covering the supported task syntax. */
 const VAULT_FIXTURES = [
   '- [ ] Semplice task senza date',
   '- [ ] Task con due 📅 2026-07-10',
   '- [x] Fatto ✅ 2026-07-03',
   '- [ ] Preparare demo 🔺 ⏳ 2026-05-04',
   '- [ ] Task completo 🔺 ➕ 2026-05-02 ⏳ 2026-05-04',
-  '- [ ] Review [[Exo — Roadmap]] 📅 2026-07-05 #deepagent',
-  '- [/] In progress con tag #captoo #domain/product',
+  '- [ ] Review [[Project Roadmap]] 📅 2026-07-05 #project',
+  '- [/] In progress con tag #personal #domain/product',
   '- [-] Cancellato',
   '- [x] Done con data corrotta ✅ 2026-05-0',
   '- [6] Status sconosciuto',
@@ -82,9 +82,9 @@ test('priority emojis map to levels', () => {
 });
 
 test('tags and links are extracted from text only', () => {
-  const parsed = parseTaskLine('- [ ] Review [[Exo — Roadmap|roadmap]] #deepagent #domain/product 📅 2026-07-05');
-  assert.deepEqual(parsed?.tags, ['#deepagent', '#domain/product']);
-  assert.deepEqual(parsed?.links, ['Exo — Roadmap']);
+  const parsed = parseTaskLine('- [ ] Review [[Project Roadmap|roadmap]] #project #domain/product 📅 2026-07-05');
+  assert.deepEqual(parsed?.tags, ['#project', '#domain/product']);
+  assert.deepEqual(parsed?.links, ['Project Roadmap']);
 });
 
 test('recurrence and unmanaged fields survive as unknown tokens', () => {

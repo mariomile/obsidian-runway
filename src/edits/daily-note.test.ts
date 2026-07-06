@@ -13,7 +13,7 @@ test('formatDayKey supports DD/MM/YYYY tokens', () => {
 test('dailyNotePath uses folder and format from settings', () => {
   assert.equal(
     dailyNotePath(DEFAULT_SETTINGS, '2026-07-03'),
-    'Journal/Daily/03-07-2026.md',
+    '2026-07-03.md',
   );
 });
 
