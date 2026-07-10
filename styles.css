@@ -985,7 +985,7 @@
 }
 
 /* Count pill (nav / column / group) */
-.runway-pill {
+.runway-board__colhead .runway-pill {
   font-variant-numeric: tabular-nums;
   background: var(--interactive-accent);
   color: var(--text-on-accent);
