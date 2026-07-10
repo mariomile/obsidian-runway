@@ -57,6 +57,10 @@ Everything writes back to the source note through a guarded line edit — the wr
 
 The whole vault is indexed except `.obsidian/` and the folders listed in **Settings → Cartelle escluse** (default: `.archive`). Tasks inside callouts and code blocks are not indexed (they are invisible to Obsidian's list-item cache).
 
+## Mobile
+
+**Playable** — `isDesktopOnly: false` in `manifest.json`; `styles.css` has `.is-mobile`/`.is-phone` layout rules (revealed tap actions, tighter padding) but hit areas are 28–32px, below the 44px Apple HIG target, and there's no `pointer: coarse` media query yet.
+
 ## Development
 
 ```bash
