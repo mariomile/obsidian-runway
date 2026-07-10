@@ -897,16 +897,14 @@
   height: 28px;
 }
 
-.is-mobile .runway-segment,
-.is-mobile .runway-fchip,
-.is-mobile .runway-iconbtn,
-.is-mobile .runway-pill {
-  min-height: 32px;
-}
-
-.is-mobile .runway-panel .runway-search__input {
-  height: 34px;
-}
+/* min-height/height for .runway-segment, .runway-fchip, .runway-iconbtn,
+   .runway-pill and .runway-panel .runway-search__input used to be set here
+   at 32-34px. That's below the 44px HIG target AND — being two class
+   selectors (0,2,0) — it beat the single-class `@media (pointer: coarse)`
+   MOBILE KIT rules below (0,1,0) on a real device where .is-mobile and
+   pointer:coarse are both true. Removed: MOBILE KIT below is now the only
+   source of truth for these five selectors' tap sizing. See MOBILE KIT
+   comment block for the full audit. */
 
 /* On a phone the full-page list is the whole screen — let it use the width. */
 .is-phone .runway-panel:not(.runway-panel--compact) {
@@ -924,6 +922,14 @@
    più piccolo di 44px, espandendo il box oltre i bordi visibili.
    Cluster hover-revealed (row/group actions, is-mobile opacity:0→hover:1) non
    hanno hover su touch: resi sempre visibili/tappabili sotto coarse pointer.
+
+   Fix specificity (2026-07-11): il blocco `.is-mobile` sopra conteneva
+   min-height/height a 32-34px per .runway-segment/.runway-fchip/
+   .runway-iconbtn/.runway-pill/.runway-panel .runway-search__input — due
+   class selector (0,2,0) che battevano queste regole a un class selector
+   (0,1,0) su device reale (.is-mobile + pointer:coarse simultanei).
+   Rimosse dal blocco .is-mobile; MOBILE KIT sotto è ora l'unica fonte di
+   verità per quei cinque selector.
 
    Controlli auditati (selector → trattamento):
    - .runway-iconbtn                 → hit-area 44×44 (icon button, visual invariato)

@@ -59,7 +59,7 @@ The whole vault is indexed except `.obsidian/` and the folders listed in **Setti
 
 ## Mobile
 
-**Playable** — `isDesktopOnly: false` in `manifest.json`; `styles.css` has `.is-mobile`/`.is-phone` layout rules (revealed tap actions, tighter padding) but hit areas are 28–32px, below the 44px Apple HIG target, and there's no `pointer: coarse` media query yet.
+**Playable** — `isDesktopOnly: false` in `manifest.json`; `styles.css` has `.is-mobile`/`.is-phone` layout rules (revealed tap actions, tighter padding) plus a `@media (pointer: coarse)` MOBILE KIT block that brings every interactive control to a 44px effective tap target (full controls via `min-height: 44px`; small in-card glyph buttons keep their visual size and get an invisible `::after` hit-area instead; hover-revealed action clusters are forced visible since hover doesn't exist on touch).
 
 ## Development
 
