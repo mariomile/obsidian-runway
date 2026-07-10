@@ -12,4 +12,5 @@ export interface RunwayContext {
   edits: TaskEditService;
   saveSettings(): Promise<void>;
   openListView(): Promise<void>;
+  onQuickAdd(): void;
 }

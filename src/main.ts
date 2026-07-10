@@ -117,6 +117,7 @@ export default class RunwayPlugin extends Plugin {
       edits: this.edits,
       saveSettings: () => this.saveSettings(),
       openListView: () => this.openListView(),
+      onQuickAdd: () => new QuickAddModal(this.context()).open(),
     };
   }
 

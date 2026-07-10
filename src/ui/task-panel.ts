@@ -9,6 +9,7 @@ import { boardGroup } from '../core/board.ts';
 import { dailyNotePath } from '../edits/daily-note.ts';
 import type { ViewId } from '../core/views.ts';
 import { renderTaskRow } from './task-row.ts';
+import { renderViewNav } from './view-nav.ts';
 import { promptTaskNote, refOf } from './task-menu.ts';
 import { showDateMenu } from './date-menu.ts';
 import { pickNote } from './note-picker.ts';
@@ -131,6 +132,7 @@ export class TaskPanel {
   /** Groups the user expanded past PAGE_SIZE; reset when the query changes. */
   private readonly expanded = new Set<string>();
 
+  private navEl: HTMLElement | null = null;
   private filtersEl: HTMLElement | null = null;
   private bulkBarEl: HTMLElement | null = null;
   private resultsEl: HTMLElement | null = null;
@@ -198,6 +200,9 @@ export class TaskPanel {
     const root = this.container;
     root.empty();
 
+    this.navEl = root.createDiv({ cls: 'runway-nav-host' });
+    this.renderNav();
+
     // No title or divider — the tab already reads "Runway"; keep it light.
     this.countEl = null;
     const header = root.createDiv({ cls: 'runway-panel__header' });
@@ -239,6 +244,26 @@ export class TaskPanel {
 
     this.renderFilters();
     this.renderResults();
+  }
+
+  private renderNav(): void {
+    const host = this.navEl;
+    if (!host) return;
+    host.empty();
+    renderViewNav(host, {
+      active: this.state.view,
+      mode: this.state.mode,
+      onSelect: (view) => this.selectView(view),
+      onToggleMode: () => this.toggleMode(),
+      onNewTask: () => this.ctx.onQuickAdd(),
+    });
+  }
+
+  private toggleMode(): void {
+    this.update(() => {
+      this.state.mode = this.state.mode === 'list' ? 'board' : 'list';
+    });
+    this.renderNav();
   }
 
   // ── Filter bar ──────────────────────────────────────────────────────
@@ -868,6 +893,7 @@ export class TaskPanel {
       if (this.state.group === 'agenda') this.seedAgendaCollapse();
     });
     this.renderFilters();
+    this.renderNav();
   }
 
   // ── Saved views ─────────────────────────────────────────────────────
