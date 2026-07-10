@@ -914,6 +914,91 @@
   max-width: none;
 }
 
+/* ==========================================================================
+   MOBILE KIT — pattern touch condiviso della suite marioverse (2026-07-10,
+   nato in masonry/styles.css:708-742). Su pointer coarse ogni controllo
+   raggiunge il minimo Apple HIG di 44pt. Per i bottoni/glifi piccoli dentro
+   righe e card NON si ingrandisce il glifo (affollerebbe la riga): si estende
+   l'HIT AREA con un pseudo-elemento trasparente centrato — visual invariato,
+   tap 44pt. inset: calc((100% - 44px) / 2) → negativo quando il controllo è
+   più piccolo di 44px, espandendo il box oltre i bordi visibili.
+   Cluster hover-revealed (row/group actions, is-mobile opacity:0→hover:1) non
+   hanno hover su touch: resi sempre visibili/tappabili sotto coarse pointer.
+
+   Controlli auditati (selector → trattamento):
+   - .runway-iconbtn                 → hit-area 44×44 (icon button, visual invariato)
+   - .runway-add-btn                 → min-height 44px (bottone pieno, ha testo/icona)
+   - .runway-nav__view               → min-height 44px (segmented view nav)
+   - .runway-nav__add                → min-height 44px (bottone pieno "New task")
+   - .runway-search__input           → min-height 44px (text input)
+   - .runway-segment                 → min-height 44px (segmented time filter)
+   - .runway-pill                    → min-height 44px (status pill / bulk action)
+   - .runway-fchip                   → min-height 44px (filter chip / menu chip)
+   - .runway-quick-add__chip         → min-height 44px (date chip nel modal quick-add)
+   - .runway-group__head             → min-height 44px (accordion header, role=button)
+   - .runway-group__more             → min-height 44px ("Mostra altri N")
+   - .runway-group__act              → hit-area 44×44 + sempre visibile (era opacity:0→hover)
+   - .runway-row                     → min-height 44px (riga task, contiene desc clickable)
+   - .runway-row__check              → hit-area 44×44 (checkbox custom, glifo 13px invariato)
+   - .runway-row__more               → hit-area 44×44 + sempre visibile (era opacity:0→hover)
+   - .runway-row__note               → hit-area 44×44 (riga "modifica nota")
+   - .runway-chip--due / --scheduled → hit-area 44×44 (chip data clickable → reschedule)
+   - .runway-chip--note              → hit-area 44×44 (chip nome-nota; overflow:visible per
+                                        non ritagliare l'inset negativo sul proprio testo troncato)
+   ========================================================================== */
+@media (pointer: coarse) {
+  .runway-add-btn,
+  .runway-nav__view,
+  .runway-nav__add,
+  .runway-panel .runway-search__input,
+  .runway-segment,
+  .runway-pill,
+  .runway-fchip,
+  .runway-quick-add__chip,
+  .runway-group__head,
+  .runway-group__more,
+  .runway-row {
+    min-height: 44px;
+  }
+
+  /* Hit-area 44pt sui controlli piccoli (glifo/visual invariato). */
+  .runway-iconbtn,
+  .runway-group__act,
+  .runway-row__check,
+  .runway-row__more,
+  .runway-row__note,
+  .runway-chip--due,
+  .runway-chip--scheduled,
+  .runway-chip--note {
+    position: relative;
+  }
+  .runway-iconbtn::after,
+  .runway-group__act::after,
+  .runway-row__check::after,
+  .runway-row__more::after,
+  .runway-row__note::after,
+  .runway-chip--due::after,
+  .runway-chip--scheduled::after,
+  .runway-chip--note::after {
+    content: '';
+    position: absolute;
+    inset: calc((100% - 44px) / 2);
+  }
+
+  /* .runway-chip--note truncates its own text with overflow:hidden, which
+     would clip the negative-inset hit-area above; lift the clip for this
+     chip only so the 44pt hit zone isn't cropped back down to its visual size. */
+  .runway-chip--note {
+    overflow: visible;
+  }
+
+  /* No hover on touch: hover-revealed action clusters must stay visible/tappable. */
+  .runway-group__act,
+  .runway-row__more {
+    opacity: 1;
+  }
+}
+
 /* ── Reduced motion ──────────────────────────────────────────────────── */
 
 @media (prefers-reduced-motion: reduce) {
