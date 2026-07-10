@@ -75,7 +75,7 @@ export interface TaskFilter {
 
 export type TaskSort = 'due' | 'priority' | 'path';
 
-export type TaskGroup = 'none' | 'note' | 'date' | 'agenda' | 'priority' | 'tag' | 'folder';
+export type TaskGroup = 'none' | 'note' | 'status' | 'date' | 'agenda' | 'priority' | 'tag' | 'folder';
 
 export interface TaskGroupResult {
   key: string;

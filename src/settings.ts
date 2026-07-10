@@ -16,7 +16,7 @@ export const DEFAULT_SETTINGS: RunwaySettings = {
 };
 
 const SORTS: readonly TaskSort[] = ['due', 'priority', 'path'];
-const GROUPS: readonly TaskGroup[] = ['none', 'note', 'date', 'agenda', 'priority', 'tag', 'folder'];
+const GROUPS: readonly TaskGroup[] = ['none', 'note', 'status', 'date', 'agenda', 'priority', 'tag', 'folder'];
 
 function parseSavedViews(value: unknown): SavedView[] {
   if (!Array.isArray(value)) return [];

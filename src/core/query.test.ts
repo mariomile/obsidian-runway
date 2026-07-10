@@ -8,10 +8,20 @@ import type { Task, TaskFilter } from '../types.ts';
 
 const TODAY = '2026-07-03';
 
-function makeTask(line: string, path = 'Active/Projects/Test/note.md', lineNo = 0): Task {
-  const parsed = parseTaskLine(line);
-  if (!parsed) throw new Error(`fixture must parse: ${line}`);
-  return { ...parsed, path, line: lineNo, rawText: line, folder: topLevelFolder(path) };
+function makeTask(line: string, path?: string, lineNo?: number): Task;
+function makeTask(overrides: Partial<Task> & { path: string; line: number }): Task;
+function makeTask(
+  lineOrOverrides: string | (Partial<Task> & { path: string; line: number }),
+  path = 'Active/Projects/Test/note.md',
+  lineNo = 0,
+): Task {
+  if (typeof lineOrOverrides !== 'string') {
+    const base = makeTask('- [ ] Fixture task', lineOrOverrides.path, lineOrOverrides.line);
+    return { ...base, ...lineOrOverrides, folder: topLevelFolder(lineOrOverrides.path) };
+  }
+  const parsed = parseTaskLine(lineOrOverrides);
+  if (!parsed) throw new Error(`fixture must parse: ${lineOrOverrides}`);
+  return { ...parsed, path, line: lineNo, rawText: lineOrOverrides, folder: topLevelFolder(path) };
 }
 
 const TASKS: Task[] = [
@@ -208,4 +218,17 @@ test('group none returns a single bucket with everything matched', () => {
   const groups = queryTasks(TASKS, DEFAULT_FILTER, 'due', 'none', TODAY);
   assert.equal(groups.length, 1);
   assert.equal(groups[0]?.tasks.length, 6);
+});
+
+test('groups by status with a stable column order', () => {
+  const tasks = [
+    makeTask({ path: 'a.md', line: 1, status: 'done' }),
+    makeTask({ path: 'a.md', line: 2, status: 'todo' }),
+    makeTask({ path: 'a.md', line: 3, status: 'in-progress' }),
+  ];
+  const groups = queryTasks(tasks, { ...DEFAULT_FILTER, statuses: [] }, 'path', 'status', '2026-07-10');
+  assert.deepEqual(
+    groups.map((g) => g.label),
+    ['Todo', 'In progress', 'Done'],
+  );
 });

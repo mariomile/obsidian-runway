@@ -203,6 +203,23 @@ function groupSpec(
       return { key: 'all', label: '' };
     case 'note':
       return noteGroup(task, options.inboxFolders ?? []);
+    case 'status': {
+      const rank: Record<Task['status'], number> = {
+        todo: 0,
+        'in-progress': 1,
+        done: 2,
+        cancelled: 3,
+        unknown: 4,
+      };
+      const label: Record<Task['status'], string> = {
+        todo: 'Todo',
+        'in-progress': 'In progress',
+        done: 'Done',
+        cancelled: 'Cancelled',
+        unknown: 'Other',
+      };
+      return { key: `${rank[task.status]}-${task.status}`, label: label[task.status] };
+    }
     case 'date':
       return dateGroup(task, today);
     case 'agenda':
