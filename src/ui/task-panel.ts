@@ -8,6 +8,7 @@ import { resolveView } from '../core/views.ts';
 import { boardGroup } from '../core/board.ts';
 import { dailyNotePath } from '../edits/daily-note.ts';
 import type { ViewId } from '../core/views.ts';
+import { renderBoard } from './kanban.ts';
 import { renderTaskRow } from './task-row.ts';
 import { renderViewNav } from './view-nav.ts';
 import { promptTaskNote, refOf } from './task-menu.ts';
@@ -574,6 +575,16 @@ export class TaskPanel {
       this.cursor = -1;
       this.renderBulkBar();
       results.createDiv({ cls: 'runway-empty', text: 'Nessun task corrisponde ai filtri.' });
+      return;
+    }
+
+    if (this.state.mode === 'board') {
+      renderBoard(results, groups, {
+        ctx: this.ctx,
+        columnsBy: this.ctx.settings.boardColumnsBy,
+        onChanged: () => this.renderResults(),
+      });
+      this.renderBulkBar();
       return;
     }
 
