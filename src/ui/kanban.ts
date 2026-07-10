@@ -39,7 +39,21 @@ export function renderBoard(parent: HTMLElement, groups: TaskGroupResult[], opts
         e.preventDefault();
         column.removeClass('is-dragover');
         const payload = e.dataTransfer?.getData(DRAG_MIME);
-        if (payload) void handleDrop(JSON.parse(payload) as TaskRef, action, opts);
+        if (!payload) return;
+        let parsed: unknown;
+        try {
+          parsed = JSON.parse(payload);
+        } catch {
+          return;
+        }
+        if (
+          typeof parsed === 'object' && parsed !== null &&
+          typeof (parsed as { path?: unknown }).path === 'string' &&
+          typeof (parsed as { line?: unknown }).line === 'number' &&
+          typeof (parsed as { rawText?: unknown }).rawText === 'string'
+        ) {
+          void handleDrop(parsed as TaskRef, action, opts);
+        }
       });
     }
 
