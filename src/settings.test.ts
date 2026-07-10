@@ -22,6 +22,16 @@ test('parseSettings keeps valid values and coerces invalid ones', () => {
   assert.equal(parsed.defaultGroup, DEFAULT_SETTINGS.defaultGroup);
 });
 
+test('parses defaultView and boardColumnsBy with fallbacks', () => {
+  const s = parseSettings({ defaultView: 'inbox', boardColumnsBy: 'priority' });
+  assert.equal(s.defaultView, 'inbox');
+  assert.equal(s.boardColumnsBy, 'priority');
+
+  const bad = parseSettings({ defaultView: 'nope', boardColumnsBy: 'nope' });
+  assert.equal(bad.defaultView, 'today');
+  assert.equal(bad.boardColumnsBy, 'status');
+});
+
 test('isExcludedPath matches folder prefixes only', () => {
   const folders = ['.archive', 'Resources/Readwise'];
   assert.ok(isExcludedPath('.archive/old.md', folders));

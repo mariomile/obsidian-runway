@@ -1,3 +1,5 @@
+import type { ViewId } from './core/views.ts';
+
 /** Calendar day in YYYY-MM-DD form. */
 export type DayKey = string;
 
@@ -112,4 +114,8 @@ export interface RunwaySettings {
   /** Defaults for the list view toolbar. */
   defaultSort: TaskSort;
   defaultGroup: TaskGroup;
+  /** View shown when a Runway surface first opens. */
+  defaultView: ViewId;
+  /** Dimension the Kanban board splits columns by. */
+  boardColumnsBy: 'status' | 'time' | 'priority';
 }

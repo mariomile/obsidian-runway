@@ -4,6 +4,7 @@ import type { MenuItem } from 'obsidian';
 import { todayKey } from '../dates.ts';
 import { DEFAULT_FILTER, queryTasks } from '../core/query.ts';
 import { PRIORITY_EMOJI } from '../core/parse.ts';
+import type { ViewId } from '../core/views.ts';
 import { renderTaskRow } from './task-row.ts';
 import { promptTaskNote, refOf } from './task-menu.ts';
 import { showDateMenu } from './date-menu.ts';
@@ -96,6 +97,8 @@ function shortLabel(options: readonly [string, string][], value: string): string
 }
 
 export interface TaskPanelState {
+  view: ViewId;
+  mode: 'list' | 'board';
   filter: TaskFilter;
   sort: TaskSort;
   group: TaskGroup;
@@ -151,6 +154,8 @@ export class TaskPanel {
     this.ctx = ctx;
     this.options = options;
     this.state = {
+      view: initial.view ?? ctx.settings.defaultView,
+      mode: initial.mode ?? 'list',
       filter: { ...structuredClone(DEFAULT_FILTER), ...(initial.filter ?? {}) },
       sort: initial.sort ?? ctx.settings.defaultSort,
       group: initial.group ?? ctx.settings.defaultGroup,

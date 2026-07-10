@@ -13,10 +13,14 @@ export const DEFAULT_SETTINGS: RunwaySettings = {
   quickAddHeading: '',
   defaultSort: 'due',
   defaultGroup: 'note',
+  defaultView: 'today',
+  boardColumnsBy: 'status',
 };
 
 const SORTS: readonly TaskSort[] = ['due', 'priority', 'path'];
 const GROUPS: readonly TaskGroup[] = ['none', 'note', 'status', 'date', 'agenda', 'priority', 'tag', 'folder'];
+const VIEWS: readonly RunwaySettings['defaultView'][] = ['inbox', 'today', 'upcoming', 'all'];
+const BOARD_COLS: readonly RunwaySettings['boardColumnsBy'][] = ['status', 'time', 'priority'];
 
 function parseSavedViews(value: unknown): SavedView[] {
   if (!Array.isArray(value)) return [];
@@ -56,6 +60,8 @@ export function parseSettings(data: unknown): RunwaySettings {
     quickAddHeading: stringValue(data.quickAddHeading, DEFAULT_SETTINGS.quickAddHeading),
     defaultSort: oneOf(data.defaultSort, SORTS, DEFAULT_SETTINGS.defaultSort),
     defaultGroup: oneOf(data.defaultGroup, GROUPS, DEFAULT_SETTINGS.defaultGroup),
+    defaultView: oneOf(data.defaultView, VIEWS, DEFAULT_SETTINGS.defaultView),
+    boardColumnsBy: oneOf(data.boardColumnsBy, BOARD_COLS, DEFAULT_SETTINGS.boardColumnsBy),
   };
 }
 
