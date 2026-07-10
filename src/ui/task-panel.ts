@@ -141,6 +141,13 @@ export class TaskPanel {
   private unsubscribe: (() => void) | null = null;
   private searchTimer: ReturnType<typeof setTimeout> | null = null;
   private lastGroupKeys: string[] = [];
+  /** Last day rendered for; drives the midnight rollover backstop below. */
+  private lastRenderedDay = '';
+  /** Timer poll (NOT render-loop-gated) — the durable fix for idle panes
+      missing render-loop triggers: a stale pane never re-renders on its own
+      just because the calendar day changed, so a plain interval check is the
+      guaranteed backstop for the Today view's midnight rollover. */
+  private dayCheck: number | null = null;
 
   // Keyboard cursor + multi-selection over the currently-visible rows.
   private cursor = -1;
@@ -159,12 +166,27 @@ export class TaskPanel {
     this.container = container;
     this.ctx = ctx;
     this.options = options;
+    const view = initial.view ?? ctx.settings.defaultView;
+    // A fresh leaf (no persisted filter) must show the resolved view's own
+    // filter/group on first render — otherwise the nav highlights the default
+    // view while the query still runs with DEFAULT_FILTER (due:'all'), so the
+    // list looks wrong until the user clicks the view again. A restored leaf
+    // (initial.filter present) keeps the user's persisted refinements as-is.
+    const seededView =
+      initial.filter === undefined
+        ? resolveView(view, {
+            today: todayKey(),
+            dailyPath: dailyNotePath(ctx.settings, todayKey()),
+          })
+        : null;
     this.state = {
-      view: initial.view ?? ctx.settings.defaultView,
+      view,
       mode: initial.mode ?? 'list',
-      filter: { ...structuredClone(DEFAULT_FILTER), ...(initial.filter ?? {}) },
+      filter: seededView
+        ? structuredClone(seededView.filter)
+        : { ...structuredClone(DEFAULT_FILTER), ...(initial.filter ?? {}) },
       sort: initial.sort ?? ctx.settings.defaultSort,
-      group: initial.group ?? ctx.settings.defaultGroup,
+      group: seededView ? seededView.group : (initial.group ?? ctx.settings.defaultGroup),
       collapsed: initial.collapsed ?? [],
     };
     this.collapsed = new Set(this.state.collapsed);
@@ -181,10 +203,15 @@ export class TaskPanel {
     this.container.addEventListener('keydown', this.keyHandler);
     this.unsubscribe = this.ctx.index.subscribe(() => this.renderResults());
     this.renderChrome();
+    this.dayCheck = window.setInterval(() => {
+      if (todayKey() !== this.lastRenderedDay) this.renderResults();
+    }, 60_000);
   }
 
   unmount(): void {
     if (this.searchTimer !== null) clearTimeout(this.searchTimer);
+    if (this.dayCheck !== null) window.clearInterval(this.dayCheck);
+    this.dayCheck = null;
     if (this.keyHandler) this.container.removeEventListener('keydown', this.keyHandler);
     this.keyHandler = null;
     this.unsubscribe?.();
@@ -542,6 +569,7 @@ export class TaskPanel {
       return;
     }
 
+    this.lastRenderedDay = todayKey();
     const view = this.state.view;
     const resolved = resolveView(view, this.viewCtx());
     const group = this.state.mode === 'board'

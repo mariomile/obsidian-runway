@@ -1,4 +1,5 @@
 import { DEFAULT_FILTER } from './core/query.ts';
+import { VIEW_IDS } from './core/views.ts';
 import { boundedNumber } from './utils.ts';
 import type { RunwaySettings, SavedView, TaskFilter, TaskGroup, TaskSort } from './types.ts';
 
@@ -19,7 +20,7 @@ export const DEFAULT_SETTINGS: RunwaySettings = {
 
 const SORTS: readonly TaskSort[] = ['due', 'priority', 'path'];
 const GROUPS: readonly TaskGroup[] = ['none', 'note', 'status', 'date', 'agenda', 'priority', 'tag', 'folder'];
-const VIEWS: readonly RunwaySettings['defaultView'][] = ['inbox', 'today', 'upcoming', 'all'];
+const VIEWS: readonly RunwaySettings['defaultView'][] = VIEW_IDS;
 const BOARD_COLS: readonly RunwaySettings['boardColumnsBy'][] = ['status', 'time', 'priority'];
 
 function parseSavedViews(value: unknown): SavedView[] {

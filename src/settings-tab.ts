@@ -2,7 +2,8 @@ import { PluginSettingTab, Setting } from 'obsidian';
 import type { App } from 'obsidian';
 
 import type RunwayPlugin from './main.ts';
-import type { TaskGroup, TaskSort } from './types.ts';
+import type { RunwaySettings, TaskGroup, TaskSort } from './types.ts';
+import type { ViewId } from './core/views.ts';
 
 export class RunwaySettingTab extends PluginSettingTab {
   private readonly plugin: RunwayPlugin;
@@ -134,6 +135,30 @@ export class RunwaySettingTab extends PluginSettingTab {
           .setValue(this.plugin.settings.defaultGroup)
           .onChange(async (value) => {
             this.plugin.settings.defaultGroup = value as TaskGroup;
+            await this.plugin.saveSettings();
+          }),
+      );
+
+    new Setting(containerEl)
+      .setName('Vista di default')
+      .addDropdown((dropdown) =>
+        dropdown
+          .addOptions({ inbox: 'Inbox', today: 'Today', upcoming: 'Upcoming', all: 'All' })
+          .setValue(this.plugin.settings.defaultView)
+          .onChange(async (value) => {
+            this.plugin.settings.defaultView = value as ViewId;
+            await this.plugin.saveSettings();
+          }),
+      );
+
+    new Setting(containerEl)
+      .setName('Colonne board')
+      .addDropdown((dropdown) =>
+        dropdown
+          .addOptions({ status: 'Per stato', time: 'Per data', priority: 'Per priorità' })
+          .setValue(this.plugin.settings.boardColumnsBy)
+          .onChange(async (value) => {
+            this.plugin.settings.boardColumnsBy = value as RunwaySettings['boardColumnsBy'];
             await this.plugin.saveSettings();
           }),
       );
