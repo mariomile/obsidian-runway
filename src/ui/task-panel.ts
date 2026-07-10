@@ -2,8 +2,11 @@ import { Menu, Notice, setIcon } from 'obsidian';
 import type { MenuItem } from 'obsidian';
 
 import { todayKey } from '../dates.ts';
-import { DEFAULT_FILTER, queryTasks } from '../core/query.ts';
+import { DEFAULT_FILTER, queryTasks, pinGroups } from '../core/query.ts';
 import { PRIORITY_EMOJI } from '../core/parse.ts';
+import { resolveView } from '../core/views.ts';
+import { boardGroup } from '../core/board.ts';
+import { dailyNotePath } from '../edits/daily-note.ts';
 import type { ViewId } from '../core/views.ts';
 import { renderTaskRow } from './task-row.ts';
 import { promptTaskNote, refOf } from './task-menu.ts';
@@ -513,17 +516,26 @@ export class TaskPanel {
       return;
     }
 
-    const groups = queryTasks(
+    const view = this.state.view;
+    const resolved = resolveView(view, this.viewCtx());
+    const group = this.state.mode === 'board'
+      ? boardGroup(this.ctx.settings.boardColumnsBy)
+      : this.state.group;
+    let groups = queryTasks(
       this.ctx.index.all(),
       this.state.filter,
       this.state.sort,
-      this.state.group,
+      group,
       todayKey(),
       {
         inboxFolders: this.ctx.settings.inboxFolders,
         agendaHorizonDays: this.ctx.settings.agendaHorizonDays,
       },
+      view === 'today' ? resolved.include : undefined,
     );
+    if (view === 'today' && this.state.mode === 'list' && resolved.pinnedGroupKeys) {
+      groups = pinGroups(groups, resolved.pinnedGroupKeys);
+    }
     for (const group of groups) {
       for (const task of group.tasks) this.taskByKey.set(taskKey(task), task);
     }
@@ -836,6 +848,26 @@ export class TaskPanel {
     else this.collapsed.add(key);
     this.options.onStateChange();
     this.renderResults();
+  }
+
+  // ── Fixed views (Inbox/Today/Upcoming/All) ──────────────────────────
+
+  private viewCtx(): { today: string; dailyPath: string } {
+    const today = todayKey();
+    return { today, dailyPath: dailyNotePath(this.ctx.settings, today) };
+  }
+
+  /** Switch the active fixed view: reset filter+group to the view's base. */
+  selectView(view: ViewId): void {
+    const resolved = resolveView(view, this.viewCtx());
+    this.update(() => {
+      this.state.view = view;
+      this.state.filter = { ...structuredClone(DEFAULT_FILTER), ...resolved.filter };
+      this.state.group = resolved.group;
+      this.collapsed.clear();
+      if (this.state.group === 'agenda') this.seedAgendaCollapse();
+    });
+    this.renderFilters();
   }
 
   // ── Saved views ─────────────────────────────────────────────────────
