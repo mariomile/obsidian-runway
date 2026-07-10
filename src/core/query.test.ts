@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
 import { parseTaskLine } from './parse.ts';
-import { DEFAULT_FILTER, matchesTask, queryTasks, sortTasks } from './query.ts';
+import { DEFAULT_FILTER, matchesTask, pinGroups, queryTasks, sortTasks } from './query.ts';
 import { topLevelFolder } from '../utils.ts';
 import type { Task, TaskFilter } from '../types.ts';
 
@@ -231,4 +231,27 @@ test('groups by status with a stable column order', () => {
     groups.map((g) => g.label),
     ['Todo', 'In progress', 'Done'],
   );
+});
+
+test('include admits a dateless task the due gate would drop, honoring status', () => {
+  const daily = 'Journal/Daily/2026-07-10.md';
+  const tasks = [
+    makeTask({ path: daily, line: 1, status: 'todo', due: undefined }),       // no date, open
+    makeTask({ path: daily, line: 2, status: 'done', due: undefined }),        // no date, done
+    makeTask({ path: 'other.md', line: 1, status: 'todo', due: '2026-07-10' }),// due today elsewhere
+  ];
+  const filter: TaskFilter = { ...DEFAULT_FILTER, due: 'today', statuses: ['todo', 'in-progress'] };
+  const groups = queryTasks(tasks, filter, 'path', 'none', '2026-07-10', {}, (t) => t.path === daily);
+  const paths = groups.flatMap((g) => g.tasks.map((t) => `${t.path}:${t.line}`));
+  assert.deepEqual(paths.sort(), [`${daily}:1`, 'other.md:1']); // done daily task excluded
+});
+
+test('pinGroups moves named keys to the front in order', () => {
+  const groups = [
+    { key: '1-b.md', label: 'b', tasks: [] },
+    { key: '1-a.md', label: 'a', tasks: [] },
+    { key: '1-daily.md', label: 'daily', tasks: [] },
+  ];
+  const pinned = pinGroups(groups, ['1-daily.md']);
+  assert.deepEqual(pinned.map((g) => g.key), ['1-daily.md', '1-a.md', '1-b.md']);
 });

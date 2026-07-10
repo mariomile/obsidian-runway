@@ -248,9 +248,15 @@ export function queryTasks(
   group: TaskGroup,
   today: DayKey,
   options: QueryOptions = {},
+  include?: (task: Task) => boolean,
 ): TaskGroupResult[] {
+  const dateFree: TaskFilter = { ...filter, due: 'all', exactDay: null };
   const matched = sortTasks(
-    tasks.filter((task) => matchesTask(task, filter, today)),
+    tasks.filter(
+      (task) =>
+        matchesTask(task, filter, today) ||
+        (include !== undefined && include(task) && matchesTask(task, dateFree, today)),
+    ),
     sort,
   );
   const groups = new Map<string, TaskGroupResult>();
@@ -264,4 +270,19 @@ export function queryTasks(
     bucket.tasks.push(task);
   }
   return [...groups.values()].sort((a, b) => a.key.localeCompare(b.key));
+}
+
+/** Move the named group keys to the front in `pinnedKeys` order; others keep their sort. */
+export function pinGroups(
+  groups: TaskGroupResult[],
+  pinnedKeys: string[],
+): TaskGroupResult[] {
+  if (pinnedKeys.length === 0) return groups;
+  const wanted = new Set(pinnedKeys);
+  const pinned: TaskGroupResult[] = [];
+  const rest: TaskGroupResult[] = [];
+  for (const group of groups) (wanted.has(group.key) ? pinned : rest).push(group);
+  pinned.sort((a, b) => pinnedKeys.indexOf(a.key) - pinnedKeys.indexOf(b.key));
+  rest.sort((a, b) => a.key.localeCompare(b.key));
+  return [...pinned, ...rest];
 }
