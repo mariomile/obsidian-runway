@@ -299,59 +299,8 @@ export class TaskPanel {
       );
     }
 
-    // The fixed-view nav owns the time slice now; this row is just the
-    // "Filtri" chip (status + tag + folder + priority) plus sort/group.
-    const activeFilters = this.activeFilterCount();
-    const filterChip = bar.createEl('button', {
-      cls: `runway-fchip${activeFilters > 0 ? ' is-active' : ''}`,
-    });
-    const filterIcon = filterChip.createSpan({ cls: 'runway-fchip__icon' });
-    setIcon(filterIcon, 'filter');
-    filterChip.createSpan({
-      cls: 'runway-fchip__label',
-      text: activeFilters > 0 ? `Filtri (${activeFilters})` : 'Filtri',
-    });
-    const filterCaret = filterChip.createSpan({ cls: 'runway-fchip__caret' });
-    setIcon(filterCaret, 'chevron-down');
-    filterChip.addEventListener('click', (event) => this.openFiltersMenu(event));
-
-    this.iconMenu(bar, 'arrow-up-down', 'Ordina', SORT_OPTIONS, this.state.sort, (value) =>
-      this.update(() => {
-        this.state.sort = value;
-      }),
-    );
-    this.iconMenu(bar, 'layout-list', 'Raggruppa', GROUP_OPTIONS, this.state.group, (value) =>
-      this.update(() => {
-        this.state.group = value;
-        if (value === 'agenda') this.seedAgendaCollapse();
-      }),
-    );
-  }
-
-  /** Icon-only button opening a single-select menu (sort / group). */
-  private iconMenu<T extends string>(
-    parent: HTMLElement,
-    icon: string,
-    label: string,
-    options: readonly [T, string][],
-    current: T,
-    onPick: (value: T) => void,
-  ): void {
-    const button = parent.createEl('button', { cls: 'runway-iconbtn' });
-    setIcon(button, icon);
-    button.setAttribute('aria-label', `${label}: ${shortLabel(options, current)}`);
-    button.addEventListener('click', (event) => {
-      const menu = new Menu();
-      for (const [value, optionLabel] of options) {
-        menu.addItem((item) =>
-          item
-            .setTitle(optionLabel)
-            .setChecked(value === current)
-            .onClick(() => onPick(value)),
-        );
-      }
-      menu.showAtMouseEvent(event);
-    });
+    // Sort, group and the filter facets all live in the nav overflow (⋯) —
+    // this row is otherwise just the search box.
   }
 
   private activeFilterCount(): number {
@@ -364,8 +313,8 @@ export class TaskPanel {
   }
 
   /** One popover holding every secondary filter dimension as a submenu. */
-  private openFiltersMenu(event: MouseEvent): void {
-    const menu = new Menu();
+  /** Filter facets (status · priority · tag · folder), for the overflow menu. */
+  private addFilterItems(menu: Menu): void {
     const facets = this.facets();
 
     menu.addItem((item) => {
@@ -459,13 +408,53 @@ export class TaskPanel {
           ),
       );
     }
-
-    menu.showAtMouseEvent(event);
   }
 
-  /** Header overflow: saved views, collapse-all, expand-to-page. */
+  /** Sort + group as submenus, for the overflow menu. */
+  private addSortGroupItems(menu: Menu): void {
+    menu.addItem((item) => {
+      item.setTitle(`Ordina · ${shortLabel(SORT_OPTIONS, this.state.sort)}`).setIcon('arrow-up-down');
+      const sub = submenuOf(item);
+      for (const [value, label] of SORT_OPTIONS) {
+        sub.addItem((sitem: MenuItem) =>
+          sitem
+            .setTitle(label)
+            .setChecked(value === this.state.sort)
+            .onClick(() =>
+              this.update(() => {
+                this.state.sort = value;
+              }),
+            ),
+        );
+      }
+    });
+    menu.addItem((item) => {
+      item.setTitle(`Raggruppa · ${shortLabel(GROUP_OPTIONS, this.state.group)}`).setIcon('layout-list');
+      const sub = submenuOf(item);
+      for (const [value, label] of GROUP_OPTIONS) {
+        sub.addItem((sitem: MenuItem) =>
+          sitem
+            .setTitle(label)
+            .setChecked(value === this.state.group)
+            .onClick(() =>
+              this.update(() => {
+                this.state.group = value;
+                if (value === 'agenda') this.seedAgendaCollapse();
+              }),
+            ),
+        );
+      }
+    });
+  }
+
+  /** Nav overflow (⋯): sort · group · filters · saved views · collapse · expand. */
   private openOverflowMenu(event: MouseEvent): void {
     const menu = new Menu();
+
+    this.addSortGroupItems(menu);
+    menu.addSeparator();
+    this.addFilterItems(menu);
+    menu.addSeparator();
 
     menu.addItem((item) => {
       item.setTitle('Viste salvate').setIcon('bookmark');

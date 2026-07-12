@@ -146,7 +146,6 @@
   align-items: center;
   flex: 1 1 auto;
   min-width: 120px;
-  max-width: 260px;
 }
 
 .runway-panel--compact .runway-search {
