@@ -1,6 +1,9 @@
-import { columnDropAction } from '../core/board.ts';
+import { setIcon } from 'obsidian';
+
+import { columnAddIntent, columnDropAction } from '../core/board.ts';
 import { todayKey } from '../dates.ts';
 import { renderTaskRow } from './task-row.ts';
+import { QuickAddModal } from './quick-add-modal.ts';
 import type { ColumnsBy } from '../core/board.ts';
 import type { TaskRef } from '../edits/task-edit.ts';
 import type { RunwayContext } from './context.ts';
@@ -66,6 +69,18 @@ export function renderBoard(parent: HTMLElement, groups: TaskGroupResult[], opts
           DRAG_MIME,
           JSON.stringify({ path: task.path, line: task.line, rawText: task.rawText }),
         );
+      });
+    }
+
+    // Column "+" — quick-add pre-filled for this column's dimension. Only on
+    // columns where creation is unambiguous (Todo, Oggi / Senza data, any priority).
+    const intent = columnAddIntent(opts.columnsBy, group.key, todayKey());
+    if (intent) {
+      const add = column.createEl('button', { cls: 'runway-board__coladd' });
+      setIcon(add.createSpan({ cls: 'runway-board__coladd-icon' }), 'plus');
+      add.createSpan({ text: 'Task' });
+      add.addEventListener('click', () => {
+        new QuickAddModal(opts.ctx, undefined, intent).open();
       });
     }
   }

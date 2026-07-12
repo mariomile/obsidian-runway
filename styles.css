@@ -473,10 +473,37 @@
 }
 
 .runway-empty {
-  color: var(--text-faint);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--size-2-2);
+  color: var(--text-muted);
   font-size: var(--font-ui-small);
-  padding: var(--size-4-6) var(--size-4-2);
+  padding: var(--size-4-6) var(--size-4-4);
   text-align: center;
+}
+
+.runway-empty__icon {
+  display: inline-flex;
+  color: var(--text-faint);
+  margin-bottom: var(--size-2-1);
+}
+
+.runway-empty__icon .svg-icon {
+  width: 22px;
+  height: 22px;
+}
+
+.runway-empty__title {
+  color: var(--text-normal);
+  font-weight: var(--font-semibold);
+  font-size: var(--font-ui-medium);
+}
+
+.runway-empty__hint {
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  max-width: 34ch;
 }
 
 /* ── Agenda grouping (per-day buckets) ───────────────────────────────── */
@@ -1180,4 +1207,30 @@
 
 .runway-board__col:not(.is-droppable) .runway-board__colhead {
   opacity: 0.6;
+}
+
+.runway-board__coladd {
+  display: flex;
+  align-items: center;
+  gap: var(--size-2-2);
+  width: 100%;
+  margin-top: var(--size-2-2);
+  padding: var(--size-2-2) var(--size-2-3);
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  border-radius: var(--radius-s);
+  font-size: var(--font-ui-smaller);
+  cursor: var(--cursor);
+  transition: background-color 120ms ease, color 120ms ease;
+}
+
+.runway-board__coladd:hover {
+  background: var(--background-modifier-hover);
+  color: var(--text-normal);
+}
+
+.runway-board__coladd .svg-icon {
+  width: 14px;
+  height: 14px;
 }

@@ -44,3 +44,32 @@ export function columnDropAction(columnsBy: ColumnsBy, columnKey: string, today:
   if (columnKey === 'zz-none') return { kind: 'clearDate' };
   return { kind: 'none' };
 }
+
+/** What a task created from a column's "+" should carry. */
+export interface AddIntent {
+  date?: DayKey | null;
+  priority?: Priority | null;
+}
+
+/**
+ * What a column's "+" pre-fills, or null when creating a task there would be
+ * ambiguous (e.g. an "In corso"/"Done" status column, or an Overdue bucket).
+ * An empty object means "plain task, no prefill".
+ */
+export function columnAddIntent(
+  columnsBy: ColumnsBy,
+  columnKey: string,
+  today: DayKey,
+): AddIntent | null {
+  if (columnsBy === 'status') {
+    return columnKey === '0-todo' ? {} : null;
+  }
+  if (columnsBy === 'priority') {
+    if (columnKey === '5-none') return { priority: null };
+    if (columnKey in PRIORITY_BY_KEY) return { priority: PRIORITY_BY_KEY[columnKey]! };
+    return null;
+  }
+  if (columnKey === 'b-today') return { date: today };
+  if (columnKey === 'zz-none') return { date: null };
+  return null;
+}

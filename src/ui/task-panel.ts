@@ -38,6 +38,12 @@ function submenuOf(item: MenuItem): Menu {
 
 const PAGE_SIZE = 200;
 
+const BOARD_COL_OPTIONS: ['status' | 'time' | 'priority', string][] = [
+  ['status', 'Stato'],
+  ['time', 'Tempo'],
+  ['priority', 'Priorità'],
+];
+
 const STATUS_OPTIONS: [TaskStatus, string][] = [
   ['todo', 'Da fare'],
   ['in-progress', 'In corso'],
@@ -299,6 +305,37 @@ export class TaskPanel {
       );
     }
 
+    // In board mode, surface the column dimension inline (it's the only
+    // board-specific control); everything else stays in the nav overflow (⋯).
+    if (this.state.mode === 'board') {
+      const current = this.ctx.settings.boardColumnsBy;
+      const chip = bar.createEl('button', { cls: 'runway-fchip' });
+      const icon = chip.createSpan({ cls: 'runway-fchip__icon' });
+      setIcon(icon, 'columns-3');
+      chip.createSpan({
+        cls: 'runway-fchip__label',
+        text: `Colonne · ${shortLabel(BOARD_COL_OPTIONS, current)}`,
+      });
+      const caret = chip.createSpan({ cls: 'runway-fchip__caret' });
+      setIcon(caret, 'chevron-down');
+      chip.addEventListener('click', (event) => {
+        const menu = new Menu();
+        for (const [value, label] of BOARD_COL_OPTIONS) {
+          menu.addItem((item) =>
+            item
+              .setTitle(label)
+              .setChecked(value === current)
+              .onClick(() => {
+                this.ctx.settings.boardColumnsBy = value;
+                void this.ctx.saveSettings();
+                this.update(() => undefined);
+              }),
+          );
+        }
+        menu.showAtMouseEvent(event);
+      });
+    }
+
     // Sort, group and the filter facets all live in the nav overflow (⋯) —
     // this row is otherwise just the search box.
   }
@@ -310,6 +347,36 @@ export class TaskPanel {
     if (this.state.filter.folder !== null) count += 1;
     if (this.state.filter.priorities !== null) count += 1;
     return count;
+  }
+
+  /** Empty-state copy: refinement-aware, else tailored to the active view. */
+  private emptyMessage(): { icon: string; title: string; hint?: string } {
+    const refined = this.state.filter.text.trim() !== '' || this.activeFilterCount() > 0;
+    if (refined) {
+      return {
+        icon: 'search-x',
+        title: 'Nessun risultato',
+        hint: 'Nessun task corrisponde a ricerca e filtri.',
+      };
+    }
+    switch (this.state.view) {
+      case 'inbox':
+        return { icon: 'inbox', title: 'Inbox pulita', hint: 'Nessun task senza data.' };
+      case 'today':
+        return {
+          icon: 'sun',
+          title: 'Niente per oggi',
+          hint: 'Nessuna scadenza oggi, né task nella giornaliera.',
+        };
+      case 'upcoming':
+        return {
+          icon: 'calendar-clock',
+          title: 'Niente in arrivo',
+          hint: 'Nessun task in scadenza nei prossimi giorni.',
+        };
+      case 'all':
+        return { icon: 'check-circle', title: 'Nessun task', hint: 'Non ci sono task nel vault.' };
+    }
   }
 
   /** One popover holding every secondary filter dimension as a submenu. */
@@ -554,7 +621,11 @@ export class TaskPanel {
     if (total === 0) {
       this.cursor = -1;
       this.renderBulkBar();
-      results.createDiv({ cls: 'runway-empty', text: 'Nessun task corrisponde ai filtri.' });
+      const empty = results.createDiv({ cls: 'runway-empty' });
+      const message = this.emptyMessage();
+      setIcon(empty.createDiv({ cls: 'runway-empty__icon' }), message.icon);
+      empty.createDiv({ cls: 'runway-empty__title', text: message.title });
+      if (message.hint) empty.createDiv({ cls: 'runway-empty__hint', text: message.hint });
       return;
     }
 

@@ -1,7 +1,23 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { boardGroup, columnDropAction } from './board.ts';
+import { boardGroup, columnAddIntent, columnDropAction } from './board.ts';
+
+test('columnAddIntent pre-fills only where creation is unambiguous', () => {
+  // status: only Todo can be created from a "+"
+  assert.deepEqual(columnAddIntent('status', '0-todo', '2026-07-12'), {});
+  assert.equal(columnAddIntent('status', '2-done', '2026-07-12'), null);
+  assert.equal(columnAddIntent('status', '1-in-progress', '2026-07-12'), null);
+  // time: Today pre-fills a due date, No date is plain, others are null
+  assert.deepEqual(columnAddIntent('time', 'b-today', '2026-07-12'), { date: '2026-07-12' });
+  assert.deepEqual(columnAddIntent('time', 'zz-none', '2026-07-12'), { date: null });
+  assert.equal(columnAddIntent('time', 'a-overdue', '2026-07-12'), null);
+  assert.equal(columnAddIntent('time', 'c-week', '2026-07-12'), null);
+  // priority: every priority column pre-fills, incl. clearing
+  assert.deepEqual(columnAddIntent('priority', '0-highest', '2026-07-12'), { priority: 'highest' });
+  assert.deepEqual(columnAddIntent('priority', '5-none', '2026-07-12'), { priority: null });
+  assert.equal(columnAddIntent('priority', 'zz-bogus', '2026-07-12'), null);
+});
 
 test('boardGroup maps the column dimension to a TaskGroup', () => {
   assert.equal(boardGroup('status'), 'status');

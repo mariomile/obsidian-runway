@@ -16,10 +16,16 @@ export class QuickAddModal extends Modal {
   private priority: Priority | null = null;
   private targetPath: string | null = null;
 
-  constructor(ctx: RunwayContext, initialTargetPath?: string) {
+  constructor(
+    ctx: RunwayContext,
+    initialTargetPath?: string,
+    initial?: { date?: DayKey | null; priority?: Priority | null },
+  ) {
     super(ctx.app);
     this.ctx = ctx;
     this.targetPath = initialTargetPath ?? null;
+    if (initial?.date !== undefined) this.date = initial.date;
+    if (initial?.priority !== undefined) this.priority = initial.priority;
   }
 
   onOpen(): void {
@@ -56,7 +62,9 @@ export class QuickAddModal extends Modal {
       });
       chipEls.push(chip);
     }
-    chipEls[0]?.addClass('is-active');
+    // The loop already marked the chip matching this.date (prefill or null
+    // default); only fall back to the first when nothing matched.
+    if (!chipEls.some((el) => el.hasClass('is-active'))) chipEls[0]?.addClass('is-active');
 
     const priorityRow = this.contentEl.createDiv({ cls: 'runway-quick-add__priority' });
     const select = priorityRow.createEl('select', { cls: 'dropdown' });
@@ -71,6 +79,7 @@ export class QuickAddModal extends Modal {
     for (const [label, value] of priorities) {
       select.createEl('option', { text: label, value });
     }
+    select.value = this.priority ?? '';
     select.addEventListener('change', () => {
       this.priority = select.value === '' ? null : (select.value as Priority);
     });
