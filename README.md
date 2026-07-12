@@ -1,17 +1,23 @@
 # Runway
 
-Task management for [Obsidian](https://obsidian.md): a sidebar glance and a filterable full-page list over the checkbox tasks already in your notes. Fully compatible with the [Tasks plugin](https://publish.obsidian.md/tasks/) emoji syntax — your notes stay the source of truth, no migration, no separate database.
+Task management for [Obsidian](https://obsidian.md): **fixed views** (Inbox · Oggi · Prossimi · Tutti) and a **Kanban board** over the checkbox tasks already in your notes. Fully compatible with the [Tasks plugin](https://publish.obsidian.md/tasks/) emoji syntax — your notes stay the source of truth, no migration, no separate database.
 
 ## Views
 
-Sidebar and full page are the **same component** at two densities — identical filtering, grouping, accordion and keyboard behavior.
+A fixed **view nav** slices the list by time — the primary navigation:
 
-- **Sidebar** — a compact glance; defaults to the day-by-day **Agenda** grouping with the far buckets collapsed.
-- **Task list** (workspace tab) — the full-density surface.
+- **Inbox** — tasks with no date.
+- **Oggi** — due today (overdue folded in) **plus** anything in today's daily note, with the daily note pinned first.
+- **Prossimi** — the day-by-day **Agenda** of what's ahead.
+- **Tutti** — everything.
 
-Both offer: a compact filter bar (text search + status pills + menu-chips for due / tag / folder / priority / sort / group), **collapsible accordion groups** (per-group + collapse-all, state persisted), grouping by **note (Inbox pinned first)** / date / **agenda** / priority / tag / folder, and **saved views** (bookmark menu → apply or save a named filter+sort+group preset; managed from settings).
+Sidebar and full page are the **same component** at two densities. The chrome is two rows: the nav, and a full-width search. Sort, grouping and the status / tag / folder / priority filters live under the nav overflow (`⋯`); **saved views** live there too (apply or save a named filter+sort+group preset). Accordion groups collapse per-group or all at once, state persisted.
 
-- **Agenda grouping** — a day-by-day timeline: one bucket per calendar day from today to a configurable horizon (default 14 days, **Settings → Orizzonte Agenda**), with everything past-due folded into a single **Overdue** bucket up top and anything beyond the horizon into **Later**. Empty days never render a bucket, so the list stays tight. Each day header carries the weekday (or **Today** / **Tomorrow**) plus a faint date; the Overdue bucket reads red and Today is marked with a due-dot. Far buckets (Later / No date) open collapsed.
+- **Agenda grouping** (Prossimi) — a day-by-day timeline: one bucket per calendar day from today to a configurable horizon (default 14 days, **Settings → Orizzonte Agenda**), with everything past-due folded into a single **Overdue** bucket and anything beyond the horizon into **Later**. Empty days never render. Each day header carries the weekday (or **Today** / **Tomorrow**) plus a faint date.
+
+### Board (Kanban)
+
+A **Lista ⇄ Board** toggle renders the current view as columns. Pick the column dimension inline — **Stato / Tempo / Priorità** (**Settings → Board columns** sets the default). Drag a card between columns to change its **status**, **reschedule** it, or set its **priority** — through the same guarded line edit as the list; non-droppable columns (e.g. Overdue) reject drops. Each column's `+` quick-adds a task pre-filled for that column (Todo, Oggi / Senza data, or a priority).
 
 ## Interactions & keyboard
 
@@ -41,7 +47,7 @@ Everything writes back to the source note through a guarded line edit — the wr
 
 - Check / uncheck (writes and removes `✅ date`), status transitions, reschedule (with 10s undo), priority and description edit.
 - **Move to note**: relocate a task line between notes (append-first, so a mid-flight failure can only duplicate — never lose — the task).
-- **Quick-add** to today's daily note (created from your daily template if missing) or any picked note. The `+` on a note group header adds straight into that note. Quick-add understands trailing **natural-language dates** — "chiama Marco domani", "review lunedì", "x tra 3 giorni" (IT + EN) — with a live preview.
+- **Quick-add** to today's daily note (created from your daily template if missing) or any picked note. A persistent **`+ Nuovo task`** in the nav, the `+` on a note group header (straight into that note), and the per-column `+` in the board all open it. Quick-add understands trailing **natural-language dates** — "chiama Marco domani", "review lunedì", "x tra 3 giorni" (IT + EN) — with a live preview.
 
 ## Recurrence
 
