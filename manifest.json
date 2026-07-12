@@ -1,7 +1,7 @@
 {
   "id": "runway",
   "name": "Runway",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "minAppVersion": "1.12.7",
   "description": "Task management: sidebar glance and a filterable task list over your notes, Tasks-plugin emoji syntax compatible.",
   "author": "Mario Miletta",
