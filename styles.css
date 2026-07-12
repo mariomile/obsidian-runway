@@ -194,12 +194,19 @@
 
 /* ── Filter bar ──────────────────────────────────────────────────────── */
 
+/* Secondary controls share Row 2 with the search: Filtri · sort · group,
+   pushed to the right; the fixed-view nav (Row 1) owns the time slice. */
 .runway-panel__filters {
   display: flex;
-  flex-direction: column;
-  gap: var(--size-4-2);
-  padding: var(--size-4-3) 0 var(--size-4-2);
+  flex-direction: row;
+  align-items: center;
+  gap: var(--size-2-2);
+  margin-left: auto;
   flex-shrink: 0;
+}
+
+.runway-panel--compact .runway-panel__header {
+  flex-wrap: wrap;
 }
 
 .runway-filterbar__row {

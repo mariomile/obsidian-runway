@@ -9,6 +9,7 @@ export interface ViewNavOptions {
   onSelect: (view: ViewId) => void;
   onToggleMode: () => void;
   onNewTask: () => void;
+  onOverflow: (event: MouseEvent) => void;
 }
 
 /** Segmented view nav + list/board toggle + add-task, styled Filone B. */
@@ -33,6 +34,11 @@ export function renderViewNav(parent: HTMLElement, opts: ViewNavOptions): void {
 
   const add = actions.createEl('button', { cls: 'runway-nav__add' });
   setIcon(add.createSpan({ cls: 'runway-nav__add-icon' }), 'plus');
-  add.createSpan({ text: 'New task' });
+  add.createSpan({ text: 'Nuovo task' });
+  add.setAttribute('aria-label', 'Nuovo task');
   add.addEventListener('click', () => opts.onNewTask());
+
+  const overflow = actions.createEl('button', { cls: 'runway-iconbtn', attr: { 'aria-label': 'Altro' } });
+  setIcon(overflow, 'more-horizontal');
+  overflow.addEventListener('click', (event) => opts.onOverflow(event));
 }

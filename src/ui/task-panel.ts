@@ -18,7 +18,6 @@ import { QuickAddModal } from './quick-add-modal.ts';
 import { promptText } from './prompt-modal.ts';
 import type { RunwayContext } from './context.ts';
 import type {
-  DueFilter,
   Priority,
   SavedView,
   Task,
@@ -38,15 +37,6 @@ function submenuOf(item: MenuItem): Menu {
 }
 
 const PAGE_SIZE = 200;
-
-/** Prominent time views (Craft-style) — the primary way to slice the list.
-   "Oggi" folds in overdue; the date grouping still shows an Overdue bucket. */
-const DUE_SEGMENTS: [DueFilter, string][] = [
-  ['today', 'Oggi'],
-  ['upcoming', 'Prossimi'],
-  ['none', 'Senza data'],
-  ['all', 'Tutti'],
-];
 
 const STATUS_OPTIONS: [TaskStatus, string][] = [
   ['todo', 'Da fare'],
@@ -233,10 +223,12 @@ export class TaskPanel {
 
     // No title or divider — the tab already reads "Runway"; keep it light.
     this.countEl = null;
+    // Row 2: search grows on the left, secondary filters (Filtri · sort ·
+    // group) sit on the right — the fixed-view nav above is the only view
+    // switch, and add-task/overflow live in the nav, so this row stays light.
     const header = root.createDiv({ cls: 'runway-panel__header' });
-    const actions = header.createDiv({ cls: 'runway-panel__actions' });
 
-    const searchWrap = actions.createDiv({ cls: 'runway-search' });
+    const searchWrap = header.createDiv({ cls: 'runway-search' });
     const searchIcon = searchWrap.createSpan({ cls: 'runway-search__icon' });
     setIcon(searchIcon, 'search');
     const search = searchWrap.createEl('input', {
@@ -255,18 +247,7 @@ export class TaskPanel {
       }, 150);
     });
 
-    const add = actions.createEl('button', { cls: 'runway-add-btn' });
-    setIcon(add, 'plus');
-    if (!this.options.compact) add.createSpan({ text: 'Task' });
-    add.setAttribute('aria-label', 'Nuovo task');
-    add.addEventListener('click', () => new QuickAddModal(this.ctx).open());
-
-    const overflow = actions.createEl('button', { cls: 'runway-iconbtn' });
-    setIcon(overflow, 'more-horizontal');
-    overflow.setAttribute('aria-label', 'Altro');
-    overflow.addEventListener('click', (event) => this.openOverflowMenu(event));
-
-    this.filtersEl = root.createDiv({ cls: 'runway-panel__filters' });
+    this.filtersEl = header.createDiv({ cls: 'runway-panel__filters' });
     this.bulkBarEl = root.createDiv({ cls: 'runway-bulkbar is-hidden' });
     this.resultsEl = root.createDiv({ cls: 'runway-panel__results' });
 
@@ -284,6 +265,7 @@ export class TaskPanel {
       onSelect: (view) => this.selectView(view),
       onToggleMode: () => this.toggleMode(),
       onNewTask: () => this.ctx.onQuickAdd(),
+      onOverflow: (event) => this.openOverflowMenu(event),
     });
   }
 
@@ -301,9 +283,9 @@ export class TaskPanel {
     if (!bar) return;
     bar.empty();
 
+    // Deep-link day pill (Horizon / agenda cross-link): removable chip.
     if (this.state.filter.exactDay) {
-      const dayRow = bar.createDiv({ cls: 'runway-filterbar__row' });
-      const pill = dayRow.createEl('button', {
+      const pill = bar.createEl('button', {
         cls: 'runway-fchip is-active',
         attr: { 'aria-label': 'Rimuovi filtro giorno' },
       });
@@ -317,28 +299,10 @@ export class TaskPanel {
       );
     }
 
-    // Primary: prominent time segments (Tutti · Oggi · Settimana · …).
-    const segRow = bar.createDiv({ cls: 'runway-filterbar__row' });
-    const segments = segRow.createDiv({ cls: 'runway-segments' });
-    for (const [value, label] of DUE_SEGMENTS) {
-      const active = !this.state.filter.exactDay && this.state.filter.due === value;
-      const segment = segments.createEl('button', {
-        cls: `runway-segment${active ? ' is-active' : ''}`,
-        text: label,
-      });
-      segment.addEventListener('click', () =>
-        this.update(() => {
-          this.state.filter.due = value;
-          this.state.filter.exactDay = null;
-        }),
-      );
-    }
-
-    // Secondary: one "Filtri" chip (status + tag + folder + priority) + sort/group.
-    const controlRow = bar.createDiv({ cls: 'runway-filterbar__row' });
-
+    // The fixed-view nav owns the time slice now; this row is just the
+    // "Filtri" chip (status + tag + folder + priority) plus sort/group.
     const activeFilters = this.activeFilterCount();
-    const filterChip = controlRow.createEl('button', {
+    const filterChip = bar.createEl('button', {
       cls: `runway-fchip${activeFilters > 0 ? ' is-active' : ''}`,
     });
     const filterIcon = filterChip.createSpan({ cls: 'runway-fchip__icon' });
@@ -351,13 +315,12 @@ export class TaskPanel {
     setIcon(filterCaret, 'chevron-down');
     filterChip.addEventListener('click', (event) => this.openFiltersMenu(event));
 
-    const controlEnd = controlRow.createDiv({ cls: 'runway-filterbar__end' });
-    this.iconMenu(controlEnd, 'arrow-up-down', 'Ordina', SORT_OPTIONS, this.state.sort, (value) =>
+    this.iconMenu(bar, 'arrow-up-down', 'Ordina', SORT_OPTIONS, this.state.sort, (value) =>
       this.update(() => {
         this.state.sort = value;
       }),
     );
-    this.iconMenu(controlEnd, 'layout-list', 'Raggruppa', GROUP_OPTIONS, this.state.group, (value) =>
+    this.iconMenu(bar, 'layout-list', 'Raggruppa', GROUP_OPTIONS, this.state.group, (value) =>
       this.update(() => {
         this.state.group = value;
         if (value === 'agenda') this.seedAgendaCollapse();

@@ -7,9 +7,9 @@ export const VIEW_IDS: readonly ViewId[] = ['inbox', 'today', 'upcoming', 'all']
 
 export const VIEW_LABELS: Record<ViewId, string> = {
   inbox: 'Inbox',
-  today: 'Today',
-  upcoming: 'Upcoming',
-  all: 'All',
+  today: 'Oggi',
+  upcoming: 'Prossimi',
+  all: 'Tutti',
 };
 
 export interface ViewContext {
