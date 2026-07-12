@@ -179,6 +179,11 @@
   box-shadow: none !important;
 }
 
+.runway-panel .runway-search__input::placeholder {
+  color: var(--text-muted);
+  opacity: 1;
+}
+
 .runway-panel .runway-search__input:focus {
   outline: none !important;
   box-shadow: none !important;
@@ -1025,7 +1030,9 @@
   display: flex;
   align-items: center;
   gap: var(--size-4-2);
-  padding: var(--size-4-2) var(--size-4-3);
+  /* No horizontal inset — the nav shares the panel's left edge with the
+     search row and the results below, so all three align to one rail. */
+  padding: var(--size-4-1) 0 var(--size-2-3);
 }
 
 .runway-nav__views {
@@ -1044,10 +1051,12 @@
   padding: var(--size-2-2) var(--size-4-2);
   border-radius: var(--radius-s);
   cursor: var(--cursor);
+  transition: background-color 120ms ease, color 120ms ease;
 }
 
 .runway-nav__view:hover {
   background: var(--background-modifier-hover);
+  color: var(--text-normal);
 }
 
 .runway-nav__view.is-active {
@@ -1057,11 +1066,17 @@
   box-shadow: var(--shadow-s);
 }
 
+.runway-nav__view:focus-visible {
+  outline: none;
+  color: var(--text-normal);
+  box-shadow: inset 0 0 0 1px var(--interactive-accent);
+}
+
 .runway-nav__actions {
   margin-left: auto;
   display: inline-flex;
   align-items: center;
-  gap: var(--size-4-2);
+  gap: var(--size-2-3);
 }
 
 .runway-nav__add {
@@ -1073,12 +1088,23 @@
   background: var(--interactive-accent);
   color: var(--text-on-accent);
   font-size: var(--font-ui-small);
+  font-weight: var(--font-medium);
   padding: var(--size-2-2) var(--size-4-2);
   cursor: var(--cursor);
+  transition: background-color 120ms ease, filter 120ms ease;
 }
 
 .runway-nav__add:hover {
   background: var(--interactive-accent-hover);
+}
+
+.runway-nav__add:active {
+  filter: brightness(0.94);
+}
+
+.runway-nav__add:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--interactive-accent);
 }
 
 /* Count pill (nav / column / group) */
@@ -1132,11 +1158,24 @@
   border-radius: var(--radius-s);
   box-shadow: var(--shadow-s);
   cursor: grab;
+  transition: box-shadow 120ms ease, border-color 120ms ease, transform 120ms ease;
+}
+
+.runway-board__card:hover {
+  border-color: var(--background-modifier-border-hover);
+  box-shadow: var(--shadow-l);
+  transform: translateY(-1px);
+}
+
+.runway-board__card:active {
+  cursor: grabbing;
 }
 
 .runway-board__col.is-dragover {
   outline: 2px solid var(--interactive-accent);
   outline-offset: -2px;
+  background: var(--background-modifier-hover);
+  transition: background-color 120ms ease;
 }
 
 .runway-board__col:not(.is-droppable) .runway-board__colhead {
