@@ -12,8 +12,13 @@ export interface TaskDTO {
   rawText: string;
   description: string;
   status: Task['status'];
+  statusChar: string;
+  done: boolean;
+  recurring: boolean;
   due?: DayKey;
   scheduled?: DayKey;
+  doneDate?: DayKey;
+  cancelledDate?: DayKey;
   priority: Priority | null;
   tags: string[];
 }
@@ -25,8 +30,13 @@ function toDTO(task: Task): TaskDTO {
     rawText: task.rawText,
     description: task.description,
     status: task.status,
+    statusChar: task.statusChar,
+    done: task.status === 'done',
+    recurring: task.tokens.some((token) => token.kind === 'unknown' && token.raw.includes('🔁')),
     due: task.due,
     scheduled: task.scheduled,
+    doneDate: task.doneDate,
+    cancelledDate: task.cancelledDate,
     priority: task.priority,
     tags: task.tags,
   };
@@ -48,6 +58,8 @@ export interface CreateTaskOptions {
  * Reachable at `app.plugins.plugins.runway.api`.
  */
 export interface RunwayApi {
+  isReady(): boolean;
+  subscribe(listener: () => void): () => void;
   allTasks(): TaskDTO[];
   query(filter: Partial<TaskFilter>): TaskDTO[];
   overdue(): TaskDTO[];
@@ -76,6 +88,12 @@ export function createRunwayApi(
   };
 
   return {
+    isReady() {
+      return index.isReady();
+    },
+    subscribe(listener) {
+      return index.subscribe(listener);
+    },
     allTasks() {
       return index.all().map(toDTO);
     },
