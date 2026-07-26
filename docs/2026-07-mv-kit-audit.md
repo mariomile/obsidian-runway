@@ -297,3 +297,52 @@ Run on the post-fix tree, exit codes and counts quoted verbatim:
   above were verified by reading the resulting CSS against the kit's phone
   column and against Runway's own existing `.is-mobile`/`.is-phone`
   precedent in the same file, not by rendering on-device.
+
+### Re-audit at landing
+
+The four §6 sub-rules were walked a second time over the *post-fix*
+`styles.css` (1002 lines) to confirm the wave closed with nothing left
+open. Findings, each from a re-run grep rather than from the pre-fix
+notes above:
+
+- **Hover gating — complete.** All 18 `:hover` selectors in the file are
+  `.runway-*`-prefixed and every one of them opens inside one of the 16
+  `@media (hover: hover)` blocks. No `.is-mobile`-scoped or otherwise
+  unprefixed hover selector exists that the contract's `.runway-*:hover`
+  scanner could structurally miss — checked explicitly, because a
+  differently-prefixed selector would be a real hole in that assertion,
+  not just in the CSS.
+- **Easing split — complete.** `--mv-wash` appears exactly once (the
+  `--runway-t` alias, all-wash consumers); `--mv-lift` appears exactly
+  once (`.runway-group__chevron`'s `rotate()` transition, a genuine
+  transform). No rule names both, and no wash property is transitioned
+  with a transform curve or vice versa.
+- **Lift cap — vacuous, re-confirmed.** No `translate`/`translateY` exists
+  anywhere in the file; the only two `transform`s are `rotate(90deg)` and
+  `rotate(45deg) scale(0.8)` (chevron, checkmark glyph), plus §3's
+  `scale(var(--cosmos-press-scale, 0.98))` press feedback. Nothing to
+  measure against the ≤2px cap.
+- **Elevation — no tier surface appeared.** `position: fixed|sticky` over
+  the whole file: **0 hits**; the three `position: absolute` sites are the
+  search icon and two checkbox-glyph internals, all in-flow chrome. The
+  bulk-action bar (`.runway-bulkbar`), the closest thing to a floating
+  affordance, is an in-flow block with a border and no `box-shadow` — Flat
+  tier, correctly shadowless. So the Pop/Island N/A verdicts above hold at
+  landing: there is still no surface for `--cosmos-pop-shadow` or
+  `--cosmos-island-shadow` to be consumed by, and neither token is
+  referenced (nor, per the kit, defined at `:root`) anywhere.
+- **Comment hygiene.** No token-glob-plus-slash text in any CSS comment —
+  grepped for the glob form of the `--mv-`, `--cosmos-` and `--runway-`
+  prefixes: 0 hits.
+
+Verification re-run at landing, exit codes captured directly (not inferred
+from absence of output):
+
+- `pnpm typecheck` (`tsc --noEmit`) — **exit 0**.
+- `pnpm lint` (`eslint src`) — **exit 0**.
+- `pnpm test` — **exit 0**, `# tests 97 / # pass 97 / # fail 0 /
+  # skipped 0 / # todo 0`, including `ok 96` (hover-gate scanner) and
+  `ok 97` (wash-alias easing).
+- `release:check` — **does not exist in this repo**; `package.json`
+  exposes exactly `dev, build, typecheck, lint, test`. Not run, not
+  substituted for.
