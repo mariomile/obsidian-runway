@@ -113,3 +113,70 @@ test('caps !important declarations at the post-mv-kit-audit count (ratchet down 
     `!important count ${importantCount} exceeds the frozen ceiling of 10`,
   );
 });
+
+// mv-kit §6 (Elevation & motion depth) — wave 2026-07 dinamica, per
+// docs/2026-07-mv-kit-audit.md's "§6 — wave 2026-07 dinamica" section.
+//
+// "A touch tap must never leave a stuck hover state — plugins must not
+// fight it with custom :hover outside @media (hover: hover) on
+// phone-reachable elements." Every `.runway-*:hover` rule in this file was
+// a bare top-level rule before this wave; the panel is phone-reachable (the
+// sidebar/full-page view both render on `.is-mobile`), so any of them could
+// leave a stuck colour wash after a tap. Brace-depth scan (ported from the
+// obsidian-tabx wave's identical assertion): tracks whether each
+// `.runway-*:hover` selector opens inside an `@media (hover: hover)` block.
+test('§6: no bare .runway-*:hover rule outside @media (hover: hover)', () => {
+  const code = stripComments(css);
+  const lines = code.split('\n');
+
+  let depth = 0;
+  const hoverGateDepths: number[] = [];
+  const violations: string[] = [];
+
+  lines.forEach((rawLine, idx) => {
+    const line = rawLine.trim();
+    const opensHoverGate = /@media\s*\(hover:\s*hover\)/.test(line) && line.includes('{');
+
+    if (opensHoverGate) hoverGateDepths.push(depth);
+
+    const opensBareRunwayHoverRule =
+      !opensHoverGate &&
+      line.includes('{') &&
+      /\.runway-[\w-]+(?:[.:][\w-]+)*:hover\b/.test(line);
+
+    if (opensBareRunwayHoverRule && hoverGateDepths.length === 0) {
+      violations.push(`line ${idx + 1}: "${line}"`);
+    }
+
+    for (const ch of rawLine) {
+      if (ch === '{') depth += 1;
+      if (ch === '}') {
+        depth -= 1;
+        const gateDepth = hoverGateDepths[hoverGateDepths.length - 1];
+        if (gateDepth !== undefined && depth <= gateDepth) {
+          hoverGateDepths.pop();
+        }
+      }
+    }
+  });
+
+  assert.deepEqual(violations, []);
+});
+
+// mv-kit §6: "colour washes ease with --mv-wash, physical lifts (transform)
+// ease with --mv-lift — the two easings are not interchangeable." Every
+// `var(--runway-t)` consumer in this file transitions background-color,
+// color, opacity, or border-color — never a transform — so the shared
+// `--runway-t` alias must resolve to `--mv-wash`, not `--mv-lift`. (The
+// file's one genuine transform transition, `.runway-group__chevron`'s
+// rotate reveal, already names `--mv-lift` directly and doesn't go through
+// `--runway-t` — untouched by this assertion.)
+test('§6: the shared --runway-t wash alias eases with --mv-wash, not --mv-lift', () => {
+  const code = stripComments(css);
+  const match = code.match(/--runway-t:\s*([^;]+);/);
+
+  assert.ok(match, 'expected to find the --runway-t custom property declaration');
+  const value = match?.[1] ?? '';
+  assert.match(value, /var\(--mv-wash,/);
+  assert.doesNotMatch(value, /var\(--mv-lift,/);
+});
