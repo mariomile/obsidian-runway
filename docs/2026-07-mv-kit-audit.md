@@ -176,3 +176,124 @@ Run on the post-fix tree, exit codes and counts quoted verbatim:
   plugins); phone changes (touch targets, motion tokens, press-scale) are
   verified by reading the resulting CSS values against the kit's phone
   column, not by rendering on-device.
+
+---
+
+## §6 — wave 2026-07 dinamica
+
+Audit of `styles.css` (942 lines pre-fix, 1002 lines post-fix) against
+`obsidian-cosmos-theme/docs/mv-kit.md` §6 ("Elevation & motion depth",
+commit `10f5ddc`, cantiere 2 — "Dinamica & profondità"), both desktop and
+phone columns. Scope: the four §6 sub-rules only (elevation hierarchy,
+hover richness, drag polish, panel/tab transitions) — coherence-only, no
+layout redesign, no new components, no new CSS files, following the same
+non-goals as wave 7. Model commits consulted: obsidian-portal (`389d564`,
+`133c93d`, `4b95bf2`) and obsidian-tabx (`cc65cd4`, `a792752`, `662d11a`).
+
+Per-rule verdict: **pass** (already compliant, nothing to do) / **fixed**
+(this wave) / **waived** (kit rule doesn't literally apply to this surface,
+with reason) / **N/A** (no surface of this type exists in Runway at all).
+
+### Elevation hierarchy
+
+| Surface | Desktop | Phone | Verdict |
+|---|---|---|---|
+| Floating chrome (Pop tier candidate: menu/tooltip/popover/prompt) | Runway renders no popover/menu chrome of its own — filter/sort/group/task/date menus are native Obsidian `Menu`, modals are native `Modal`/`FuzzySuggestModal` (`task-menu.ts`, `date-menu.ts`, `quick-add-modal.ts`, `prompt-modal.ts`, `note-picker.ts`) | same | **N/A, nessuna superficie di questo tipo** — confirmed by reading every file under `src/ui/`: zero `createDiv`-built menu/popover chrome, only native `Menu`/`Modal` instantiations. Matches wave 7's §1 "waived, nothing to tokenize" verdict on the same surfaces (already established before this wave). Nothing plugin-owned to consume `--cosmos-pop-shadow` for. |
+| `.runway-panel` (embedded view content — Island tier candidate) | No Runway-owned `box-shadow` on the panel/rail itself anywhere in `styles.css` | same | **N/A, nessuna superficie di questo tipo** — Runway's panel is view content that fills its pane (sidebar leaf or full tab), not a sidebar/rail chrome layer Runway itself draws with elevation. Any Island shadow on the surrounding sidedock chrome is Cosmos's own (`cosmos-islands.css`), outside this plugin's stylesheet — same reasoning as the Portal wave's `.portal-rail` verdict. |
+| Stacked tiers (Pop **and** glass on one element) | `grep -n "blur\|glass"` over `styles.css`: **0 hits** | same | **N/A, nessuna superficie di questo tipo** — no glass/blur surface exists anywhere in the file, so the "never stack two tiers" MUST NOT has nothing to violate. |
+| `.runway-segment.is-active` `box-shadow: var(--shadow-s)` | native Obsidian token, not hand-picked | same | **pass** — re-confirmed from wave 7's §1 verdict; a native design-system shadow token is exactly what the kit's tier rule asks for, not a violation of it. |
+| `.runway-row.is-cursor` `box-shadow: inset 2px 0 0 var(--interactive-accent)` | a 2px inset accent ring (keyboard-cursor indicator) | same | **pass** — an inset ring is a focus/cursor indicator, not an elevation shadow (no blur/offset reading as depth); nothing to stack against. Same class of exception as Portal's `.portal-tree-row.is-kb` ring. |
+
+### Hover richness
+
+| Rule | Desktop | Phone | Verdict |
+|---|---|---|---|
+| Colour **and** lift, never colour alone | All 18 `:hover` occurrences in `styles.css` (11 distinct rule groups: `.runway-iconbtn`, `.runway-add-btn`, `.runway-segment`, `.runway-pill`, `.runway-fchip`, `.runway-group__head`/`__act`/`__more`, `.runway-row`/`.is-selected`/`__check`/`__note`/`__more`, `.runway-chip--due`/`--scheduled`/`--note`, `.runway-quick-add__chip`) are colour/opacity washes only (`background-color`, `color`, `border-color`, `opacity`) on dense list-row/chip/pill surfaces — no `transform` lift on any of them | same | **pass, waived** — same reasoning as the Portal precedent: mv-kit's own code example under this rule shows `.row:hover` (colour-only) and `.card:hover` (lift-only) as two *distinct* patterns, not one rule both must satisfy. Every Runway hover surface is a row/chip/pill inside a dense list or filter bar, never a card — adding a `translateY` lift to a 24px-tall filter pill or a task row would read as jitter, not the "hint" the kit describes for card surfaces. No lift-transform hover exists in Runway to check against the ≤2px cap, so that MUST is vacuously satisfied. |
+| `--mv-wash` for colour transitions, `--mv-lift` for transform transitions (not interchangeable) | **was a violation**: the shared `--runway-t` alias (`--cosmos-t-fast` + `--mv-lift`) was reused for all 16 `background-color`/`color`/`opacity`/`border-color` wash transitions across the file (icon buttons, add button, segments, pills, chips, group head/actions, rows, checkbox, note/date/scheduled chips, quick-add chips) — none of its consumers is a transform | same fix applies (`--runway-t` is device-agnostic) | **fixed** — repointed `--runway-t`'s easing from `--mv-lift` to `--mv-wash` (`var(--cosmos-t-fast, 80ms) var(--mv-wash, cubic-bezier(0.25, 1, 0.5, 1))`) in `.runway-panel`'s single token declaration. Unlike Portal, no second alias was needed: `--runway-t` has zero transform consumers (verified via `grep -n "runway-t"` before editing — every site pairs it with a wash property), so repointing in place is the minimal fix, not introducing a parallel `--runway-wash-motion`. The file's one genuine transform transition, `.runway-group__chevron`'s `rotate()` on expand/collapse, was never routed through `--runway-t` — it already named `--mv-lift` directly and is untouched. Guarded by a new style-contract test. |
+| `transform` lift never exceeds 2px | n/a — no lift-transform hover exists (see row above) | same | **pass, not applicable** |
+| Hover gated to `@media (hover: hover)` on phone-reachable elements | **was a violation**: 0 of the file's 18 `:hover` occurrences were wrapped in `@media (hover: hover)` — Runway's panel is explicitly phone-reachable (renders as both a compact sidebar view and a full-page phone view, per the file's own pre-existing `.is-mobile`/`.is-phone` class-scoped blocks) | same rule, now fixed | **fixed** — wrapped all 18 `:hover` occurrences (11 rule groups) in `@media (hover: hover)`. Two reveal-on-hover pairs (`.runway-group__head:hover .runway-group__act` / `.runway-group__act:hover`, and `.runway-row:hover .runway-row__more` / `.runway-row__more:hover`) were checked for a phone-reachability regression before gating: both already have an independent, pre-existing `.is-mobile` fallback (`.is-mobile .runway-row__more, .is-mobile .runway-group__act { opacity: 1 }`, landed in wave 7 for the §2 touch-target fix) that forces them permanently visible on touch — gating the hover trigger does not strand either action, confirmed by reading the mobile block before editing, not assumed. No new fallback rule was needed (unlike Portal's `.portal-collection-open`, which had none). |
+
+### Drag polish
+
+| Surface | Desktop | Phone | Verdict |
+|---|---|---|---|
+| Any Runway-owned drag interaction (`.is-dragging`/`.is-dropped` or equivalent, `draggable`/`dragstart`/`dragover`/`drop` listeners) | **does not exist** | **does not exist** | **N/A, nessuna superficie di questo tipo** — confirmed via `grep -rn "draggable\|dragstart\|dragover\|dragend\|dragleave\|setDragImage" src/` (excluding test files): zero hits across all of `src/`. Runway implements no drag-and-drop anywhere — task reordering, note-linking, and filtering are all click/keyboard-driven (`task-panel.ts`'s `onKeyDown`/`moveCursor`/`toggleSelect`). The one `left: 9px` in `styles.css` (`.runway-search__icon`) is a static absolute-positioned search icon with no `transition` on `left` at all — a one-shot layout position, not a per-frame-reflow dragged element. |
+
+### Panel & tab transitions
+
+| Surface | Desktop | Phone | Verdict |
+|---|---|---|---|
+| `.runway-iconbtn.is-hidden` / `.runway-bulkbar.is-hidden` (`display: none` toggles) | Instant `display: none` toggle, no `transition` property declared on either rule | same | **pass, waived** — both are content visibility toggles driven by application state (an icon button hidden in a given view mode; the bulk-action bar shown only while `selection.size > 0`), not a persistent panel being structurally opened/closed nor a tab-content swap replacing existing content. Neither is dismissed by outside-click (so not a Pop-tier surface either) nor does either persist independently of the row/panel it lives in (so not an Island). Same judgement class as Portal's `.portal-section.is-collapsed` waiver: an instant, unanimated `display:none` matches native Obsidian's own unanimated content-visibility toggles, and adding entrance/exit motion here would be new animation scope, not a fix to an identified violation. |
+| Accordion group expand/collapse (`.runway-group__body`, shown/hidden via the `is-collapsed` class on the parent, chevron rotates via `--mv-lift`) | `.runway-group__body` itself has no transition — only the chevron icon animates its rotation; the body's content presence is controlled entirely by the parent's collapsed state in the row-rendering logic, not a CSS height/opacity animation | same | **pass, waived** — same reasoning as Portal's `.portal-section.is-collapsed .portal-section-body` verdict: this is a tree-item disclosure toggle inside an already-open panel, not workspace-level structural chrome (sidebar open/close, ribbon peek) in the sense §6's panel-motion example targets. The kit's panel rule doesn't reach a smaller-scoped in-list disclosure toggle; changing it would be new-animation scope creep beyond a coherence fix. |
+| Tab-content swap (crossfade vs. slide) | Runway renders no tab-content swap of its own | same | **N/A, nessuna superficie di questo tipo** — the plugin has one view type per leaf (`RunwaySidebarView` / the full-page view); there is no plugin-owned tab strip or content-swap surface anywhere in `src/ui/`. `grep -n "@keyframes\|slide-in"` over `styles.css`: zero hits. Nothing to crossfade-ify because nothing plugin-owned swaps. |
+
+### Not touched (explicit non-goals, confirmed out of scope)
+
+- No layout or DOM changes anywhere — every fix in this wave is a single
+  token-easing repoint (`--runway-t`'s `--mv-lift` → `--mv-wash`, one
+  declaration) or an `@media (hover: hover)` wrapper addition around 11
+  pre-existing rule groups (18 `:hover` occurrences total).
+- No new drag surface was built to give §6's Drag polish rule something to
+  satisfy — Runway's click/keyboard interaction model has no drag of its
+  own, and building one would be a new component, forbidden by this wave's
+  non-goals.
+- No entrance/exit animation was added to the accordion body disclosure or
+  the bulk-action bar reveal — both audited and waived (see Panel & tab
+  transitions above), not fixed; adding motion here would be new animation
+  scope, not a fix to an identified violation.
+- `.runway-group__chevron`'s `--mv-lift` transform-rotate transition —
+  audited and confirmed already correct (a genuine physical-transform
+  transition, not routed through the wash-tier `--runway-t` alias), no
+  change made.
+- Elevation shadows on `.runway-segment.is-active` / `.runway-row.is-cursor`
+  — re-confirmed as native-token / focus-ring exceptions (not floating or
+  persistent surfaces in §6's sense), not touched.
+
+### Style contract — new §6 assertions
+
+Two new assertions added to `src/style-contract.test.ts`, both mechanically
+derived from concrete findings above (zero speculative assertions):
+
+1. **`§6: no bare .runway-*:hover rule outside @media (hover: hover)`** — a
+   brace-depth scanner (ported from the obsidian-tabx wave's identical
+   assertion) walks `styles.css` (comments stripped) tracking whether each
+   `.runway-*:hover` rule opens inside an `@media (hover: hover)` block; any
+   that opens outside one is a violation.
+2. **`§6: the shared --runway-t wash alias eases with --mv-wash, not
+   --mv-lift`** — extracts the `--runway-t` custom-property declaration and
+   asserts its value names `var(--mv-wash, …)` and does not name
+   `var(--mv-lift, …)`.
+
+**Red-before-green, verified this wave**: both assertions were written and
+run first against the untouched pre-fix `styles.css` (`pass 4 / fail 2`) —
+the hover-gate scanner listed all 18 then-unwrapped `.runway-*:hover` rule
+openers by line, and the wash-alias assertion failed on the literal string
+match (`'var(--cosmos-t-fast, 80ms) var(--mv-lift, cubic-bezier(0.22, 1,
+0.36, 1))'` did not match `/var\(--mv-wash,/`). Re-verified a second time
+after the CSS fixes landed, by stashing only `styles.css` (keeping the new
+test file) to reproduce the identical red state and confirm it wasn't a
+one-off: `not ok 5` / `not ok 6`, `pass 4 / fail 2`, byte-identical to the
+original run. Restoring the stash brought both back to green
+(`pass 6 / fail 0`); all 4 pre-existing assertions stayed green throughout
+both runs.
+
+### Verification
+
+Run on the post-fix tree, exit codes and counts quoted verbatim:
+
+- `pnpm typecheck` (`tsc --noEmit`) — **exit 0**, 0 errors.
+- `pnpm lint` (`eslint src`) — **exit 0**, 0 problems.
+- `pnpm test` (`node --experimental-strip-types --test "src/**/*.test.ts"`)
+  — **97/97 passing** (95 pre-existing + 2 new §6 assertions in
+  `src/style-contract.test.ts`).
+- No `release:check` script exists in this repo (`package.json`'s
+  `scripts` block has only `dev`/`build`/`typecheck`/`lint`/`test`) — not
+  run, per this repo's own scope; not to be confused with a skipped step.
+- Desktop screenshot / live vault-reload verification: **pending** — not
+  performed this wave, same as wave 7's own "pending" note.
+- Phone verification: **pending Mario's on-device sign-off**, same hard
+  constraint as wave 7 — `EmulateMobile` was not used (kills Node-based
+  plugins); the hover-gate correctness and the two reveal-fallback checks
+  above were verified by reading the resulting CSS against the kit's phone
+  column and against Runway's own existing `.is-mobile`/`.is-phone`
+  precedent in the same file, not by rendering on-device.
