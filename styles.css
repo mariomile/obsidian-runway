@@ -39,11 +39,49 @@
 
 .runway-panel__actions {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 6px;
   flex: 1 1 auto;
   min-width: 0;
-  justify-content: flex-end;
+  /* The header row holds search + time segments + add/overflow. When there's
+     width (full page) they share one line; when narrow (compact sidebar) the
+     segments wrap to their own line. Visual order is driven by `order` per
+     mode (below), not DOM order, so wrapping follows the intended sequence. */
+  justify-content: flex-start;
+}
+
+/* Compact-safe default order: search · add · overflow, then segments wrap to
+   their own full-width line beneath them (no room to share). */
+.runway-panel__actions > .runway-search {
+  order: 1;
+}
+.runway-panel__actions > .runway-add-btn {
+  order: 2;
+}
+.runway-panel__actions > .runway-iconbtn {
+  order: 3;
+}
+.runway-panel__actions > .runway-segments {
+  order: 4;
+}
+.runway-panel--compact .runway-panel__actions > .runway-segments {
+  flex: 1 0 100%;
+}
+
+/* Full page: pull the segments up beside search, and float add + overflow to
+   the far right so they line up with the sort/group icons on the row below.
+   search (≤260, shrinkable) keeps the left edge; the auto margin opens the gap
+   before the buttons when there's slack, and collapses when space is tight. */
+.runway-panel:not(.runway-panel--compact) .runway-panel__actions > .runway-segments {
+  order: 2;
+}
+.runway-panel:not(.runway-panel--compact) .runway-panel__actions > .runway-add-btn {
+  order: 3;
+  margin-left: auto;
+}
+.runway-panel:not(.runway-panel--compact) .runway-panel__actions > .runway-iconbtn {
+  order: 4;
 }
 
 /* Full page: titleless, no divider, centered column. */
@@ -302,7 +340,7 @@
   display: inline-flex;
   align-items: center;
   gap: 3px;
-  height: 24px;
+  height: 26px;
   max-width: 12em;
   padding: 0 6px 0 8px;
   border-radius: var(--radius-s);

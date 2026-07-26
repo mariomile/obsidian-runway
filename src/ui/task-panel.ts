@@ -126,6 +126,8 @@ export class TaskPanel {
   private readonly expanded = new Set<string>();
 
   private filtersEl: HTMLElement | null = null;
+  /** Persistent segments host in the header row (filled by renderFilters). */
+  private segmentsEl: HTMLElement | null = null;
   private bulkBarEl: HTMLElement | null = null;
   private resultsEl: HTMLElement | null = null;
   private countEl: HTMLElement | null = null;
@@ -214,6 +216,12 @@ export class TaskPanel {
       }, 150);
     });
 
+    // Time segments live in the header row so they sit beside the search when
+    // there's width; renderFilters fills this persistent host. CSS `order` +
+    // flex-wrap pull them up next to search on the full page and drop them to
+    // their own line in the compact sidebar (see .runway-segments rules).
+    this.segmentsEl = actions.createDiv({ cls: 'runway-segments' });
+
     const add = actions.createEl('button', { cls: 'runway-add-btn' });
     setIcon(add, 'plus');
     if (!this.options.compact) add.createSpan({ text: 'Task' });
@@ -257,20 +265,23 @@ export class TaskPanel {
     }
 
     // Primary: prominent time segments (Tutti · Oggi · Settimana · …).
-    const segRow = bar.createDiv({ cls: 'runway-filterbar__row' });
-    const segments = segRow.createDiv({ cls: 'runway-segments' });
-    for (const [value, label] of DUE_SEGMENTS) {
-      const active = !this.state.filter.exactDay && this.state.filter.due === value;
-      const segment = segments.createEl('button', {
-        cls: `runway-segment${active ? ' is-active' : ''}`,
-        text: label,
-      });
-      segment.addEventListener('click', () =>
-        this.update(() => {
-          this.state.filter.due = value;
-          this.state.filter.exactDay = null;
-        }),
-      );
+    // Rendered into the persistent header host so they share the search row.
+    const segments = this.segmentsEl;
+    if (segments) {
+      segments.empty();
+      for (const [value, label] of DUE_SEGMENTS) {
+        const active = !this.state.filter.exactDay && this.state.filter.due === value;
+        const segment = segments.createEl('button', {
+          cls: `runway-segment${active ? ' is-active' : ''}`,
+          text: label,
+        });
+        segment.addEventListener('click', () =>
+          this.update(() => {
+            this.state.filter.due = value;
+            this.state.filter.exactDay = null;
+          }),
+        );
+      }
     }
 
     // Secondary: one "Filtri" chip (status + tag + folder + priority) + sort/group.
