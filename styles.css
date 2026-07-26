@@ -5,11 +5,15 @@
    due = orange · overdue = red · scheduled = cyan · done = green. */
 
 .runway-panel {
-  /* mv-kit §3: hover/reveal wash consumes the Cosmos motion tokens with
+  /* mv-kit §3/§6: hover/reveal wash consumes the Cosmos motion tokens with
      canonical fallbacks (theme-as-override — never define the --cosmos- and
      --mv- tokens ourselves at :root). Falls back to the same literal
-     Runway always shipped when Cosmos is absent. */
-  --runway-t: var(--cosmos-t-fast, 80ms) var(--mv-lift, cubic-bezier(0.22, 1, 0.36, 1));
+     Runway always shipped when Cosmos is absent. Every consumer of this
+     alias transitions background-color/color/opacity/border-color — never
+     a transform — so it eases with --mv-wash (colour-wash curve), not
+     --mv-lift (physical-transform curve): the two are not interchangeable
+     per §6's hover-richness rule. */
+  --runway-t: var(--cosmos-t-fast, 80ms) var(--mv-wash, cubic-bezier(0.25, 1, 0.5, 1));
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -97,9 +101,15 @@
   transition: background-color var(--runway-t), color var(--runway-t);
 }
 
-.runway-iconbtn:hover {
-  background: var(--background-modifier-hover);
-  color: var(--text-normal);
+/* mv-kit §6: :hover on a phone-reachable element must live inside
+   @media (hover: hover) — a bare rule fires on tap and leaves the wash
+   "stuck" until an unrelated tap elsewhere, since touch has no pointer to
+   leave. */
+@media (hover: hover) {
+  .runway-iconbtn:hover {
+    background: var(--background-modifier-hover);
+    color: var(--text-normal);
+  }
 }
 
 .runway-iconbtn.is-hidden {
@@ -127,8 +137,11 @@
   transition: background-color var(--runway-t);
 }
 
-.runway-add-btn:hover {
-  background-color: var(--interactive-accent-hover);
+/* mv-kit §6: gated, see the .runway-iconbtn:hover comment above. */
+@media (hover: hover) {
+  .runway-add-btn:hover {
+    background-color: var(--interactive-accent-hover);
+  }
 }
 
 .runway-add-btn .svg-icon {
@@ -241,8 +254,11 @@
   transition: background-color var(--runway-t), color var(--runway-t);
 }
 
-.runway-segment:hover:not(.is-active) {
-  color: var(--text-normal);
+/* mv-kit §6: gated, see the .runway-iconbtn:hover comment above. */
+@media (hover: hover) {
+  .runway-segment:hover:not(.is-active) {
+    color: var(--text-normal);
+  }
 }
 
 .runway-segment.is-active {
@@ -267,9 +283,12 @@
     border-color var(--runway-t);
 }
 
-.runway-pill:hover {
-  background-color: var(--background-modifier-hover);
-  color: var(--text-normal);
+/* mv-kit §6: gated, see the .runway-iconbtn:hover comment above. */
+@media (hover: hover) {
+  .runway-pill:hover {
+    background-color: var(--background-modifier-hover);
+    color: var(--text-normal);
+  }
 }
 
 .runway-pill.is-active {
@@ -297,9 +316,12 @@
     border-color var(--runway-t);
 }
 
-.runway-fchip:hover {
-  background-color: var(--background-modifier-hover);
-  color: var(--text-normal);
+/* mv-kit §6: gated, see the .runway-iconbtn:hover comment above. */
+@media (hover: hover) {
+  .runway-fchip:hover {
+    background-color: var(--background-modifier-hover);
+    color: var(--text-normal);
+  }
 }
 
 .runway-fchip.is-active {
@@ -366,8 +388,11 @@
   transition: background-color var(--runway-t);
 }
 
-.runway-group__head:hover {
-  background-color: var(--background-modifier-hover);
+/* mv-kit §6: gated, see the .runway-iconbtn:hover comment above. */
+@media (hover: hover) {
+  .runway-group__head:hover {
+    background-color: var(--background-modifier-hover);
+  }
 }
 
 .runway-group__chevron {
@@ -429,13 +454,19 @@
     background-color var(--runway-t);
 }
 
-.runway-group__head:hover .runway-group__act {
-  opacity: 1;
-}
+/* mv-kit §6: gated, see the .runway-iconbtn:hover comment above — the
+   phone-reachable fallback for this reveal already exists independently
+   (`.is-mobile .runway-group__act { opacity: 1 }`, below), so gating the
+   hover here doesn't strand the action on touch. */
+@media (hover: hover) {
+  .runway-group__head:hover .runway-group__act {
+    opacity: 1;
+  }
 
-.runway-group__act:hover {
-  color: var(--text-normal);
-  background-color: var(--background-modifier-hover);
+  .runway-group__act:hover {
+    color: var(--text-normal);
+    background-color: var(--background-modifier-hover);
+  }
 }
 
 .runway-group__act .svg-icon {
@@ -459,8 +490,11 @@
   transition: background-color var(--runway-t);
 }
 
-.runway-group__more:hover {
-  background-color: var(--background-modifier-hover);
+/* mv-kit §6: gated, see the .runway-iconbtn:hover comment above. */
+@media (hover: hover) {
+  .runway-group__more:hover {
+    background-color: var(--background-modifier-hover);
+  }
 }
 
 /* mv-kit §4 whisper recipe: an empty state is not a call to action. */
@@ -531,8 +565,11 @@
   transition: background-color var(--runway-t), border-color var(--runway-t);
 }
 
-.runway-row__check:hover .runway-check {
-  --runway-check-color: var(--interactive-accent);
+/* mv-kit §6: gated, see the .runway-iconbtn:hover comment above. */
+@media (hover: hover) {
+  .runway-row__check:hover .runway-check {
+    --runway-check-color: var(--interactive-accent);
+  }
 }
 
 .runway-check--in-progress {
@@ -587,8 +624,11 @@
   transition: background-color var(--runway-t);
 }
 
-.runway-row:hover {
-  background-color: var(--background-modifier-hover);
+/* mv-kit §6: gated, see the .runway-iconbtn:hover comment above. */
+@media (hover: hover) {
+  .runway-row:hover {
+    background-color: var(--background-modifier-hover);
+  }
 }
 
 .runway-row.is-cursor {
@@ -600,8 +640,10 @@
   background-color: color-mix(in srgb, var(--interactive-accent) 14%, transparent);
 }
 
-.runway-row.is-selected:hover {
-  background-color: color-mix(in srgb, var(--interactive-accent) 20%, transparent);
+@media (hover: hover) {
+  .runway-row.is-selected:hover {
+    background-color: color-mix(in srgb, var(--interactive-accent) 20%, transparent);
+  }
 }
 
 /* ── Bulk action bar ─────────────────────────────────────────────────── */
@@ -673,8 +715,11 @@
   border-radius: var(--radius-s);
 }
 
-.runway-row__note:hover {
-  color: var(--text-normal);
+/* mv-kit §6: gated, see the .runway-iconbtn:hover comment above. */
+@media (hover: hover) {
+  .runway-row__note:hover {
+    color: var(--text-normal);
+  }
 }
 
 .runway-row__note-icon {
@@ -706,13 +751,19 @@
   transition: opacity var(--runway-t), color var(--runway-t);
 }
 
-.runway-row:hover .runway-row__more {
-  opacity: 1;
-}
+/* mv-kit §6: gated, see the .runway-iconbtn:hover comment above — the
+   phone-reachable fallback for this reveal already exists independently
+   (`.is-mobile .runway-row__more { opacity: 1 }`, below), so gating the
+   hover here doesn't strand the action on touch. */
+@media (hover: hover) {
+  .runway-row:hover .runway-row__more {
+    opacity: 1;
+  }
 
-.runway-row__more:hover {
-  color: var(--text-normal);
-  background-color: var(--background-modifier-hover);
+  .runway-row__more:hover {
+    color: var(--text-normal);
+    background-color: var(--background-modifier-hover);
+  }
 }
 
 .runway-row__more svg {
@@ -750,10 +801,13 @@
   transition: background-color var(--runway-t), color var(--runway-t);
 }
 
-.runway-chip--due:hover,
-.runway-chip--scheduled:hover {
-  background-color: var(--background-modifier-hover);
-  color: var(--text-normal);
+/* mv-kit §6: gated, see the .runway-iconbtn:hover comment above. */
+@media (hover: hover) {
+  .runway-chip--due:hover,
+  .runway-chip--scheduled:hover {
+    background-color: var(--background-modifier-hover);
+    color: var(--text-normal);
+  }
 }
 
 .runway-chip--due .runway-chip__dot {
@@ -785,8 +839,11 @@
   transition: color var(--runway-t);
 }
 
-.runway-chip--note:hover {
-  color: var(--text-accent);
+/* mv-kit §6: gated, see the .runway-iconbtn:hover comment above. */
+@media (hover: hover) {
+  .runway-chip--note:hover {
+    color: var(--text-accent);
+  }
 }
 
 /* ── Quick-add modal ─────────────────────────────────────────────────── */
@@ -825,9 +882,12 @@
     border-color var(--runway-t);
 }
 
-.runway-quick-add__chip:hover {
-  background-color: var(--background-modifier-hover);
-  color: var(--text-normal);
+/* mv-kit §6: gated, see the .runway-iconbtn:hover comment above. */
+@media (hover: hover) {
+  .runway-quick-add__chip:hover {
+    background-color: var(--background-modifier-hover);
+    color: var(--text-normal);
+  }
 }
 
 .runway-quick-add__chip.is-active {
