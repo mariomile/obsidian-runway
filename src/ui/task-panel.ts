@@ -34,19 +34,19 @@ function submenuOf(item: MenuItem): Menu {
 const PAGE_SIZE = 200;
 
 /** Prominent time views (Craft-style) — the primary way to slice the list.
-   "Oggi" folds in overdue; the date grouping still shows an Overdue bucket. */
+   "Today" folds in overdue; the date grouping still shows an Overdue bucket. */
 const DUE_SEGMENTS: [DueFilter, string][] = [
-  ['today', 'Oggi'],
-  ['upcoming', 'Prossimi'],
-  ['none', 'Senza data'],
-  ['all', 'Tutti'],
+  ['today', 'Today'],
+  ['upcoming', 'Upcoming'],
+  ['none', 'No date'],
+  ['all', 'All'],
 ];
 
 const STATUS_OPTIONS: [TaskStatus, string][] = [
-  ['todo', 'Da fare'],
-  ['in-progress', 'In corso'],
-  ['done', 'Fatti'],
-  ['cancelled', 'Annullati'],
+  ['todo', 'To do'],
+  ['in-progress', 'In progress'],
+  ['done', 'Done'],
+  ['cancelled', 'Cancelled'],
 ];
 
 const OPEN_STATUSES: TaskStatus[] = ['todo', 'in-progress'];
@@ -56,39 +56,39 @@ function isDefaultStatuses(statuses: TaskStatus[]): boolean {
 }
 
 function statusSummary(statuses: TaskStatus[]): string {
-  if (statuses.length === 0) return 'Ogni stato';
-  if (isDefaultStatuses(statuses)) return 'Aperti';
+  if (statuses.length === 0) return 'Any status';
+  if (isDefaultStatuses(statuses)) return 'Open';
   return statuses
     .map((status) => STATUS_OPTIONS.find(([value]) => value === status)?.[1] ?? status)
     .join(', ');
 }
 
 const SORT_OPTIONS: [TaskSort, string][] = [
-  ['due', 'Scadenza'],
-  ['priority', 'Priorità'],
-  ['path', 'Nota'],
+  ['due', 'Due date'],
+  ['priority', 'Priority'],
+  ['path', 'Note'],
 ];
 
 const GROUP_OPTIONS: [TaskGroup, string][] = [
-  ['note', 'Nota'],
-  ['date', 'Data'],
+  ['note', 'Note'],
+  ['date', 'Date'],
   ['agenda', 'Agenda'],
-  ['priority', 'Priorità'],
+  ['priority', 'Priority'],
   ['tag', 'Tag'],
-  ['folder', 'Cartella'],
-  ['none', 'Niente'],
+  ['folder', 'Folder'],
+  ['none', 'None'],
 ];
 
 /** Agenda's far buckets open collapsed — the near days are what you glance at. */
 const AGENDA_FAR_KEYS = ['y-later', 'zz-none'];
 
 const PRIORITY_OPTIONS: [string, string][] = [
-  ['', 'Priorità'],
-  ['highest', `${PRIORITY_EMOJI.highest} Massima`],
-  ['high', `${PRIORITY_EMOJI.high} Alta`],
-  ['medium', `${PRIORITY_EMOJI.medium} Media`],
-  ['low', `${PRIORITY_EMOJI.low} Bassa`],
-  ['lowest', `${PRIORITY_EMOJI.lowest} Minima`],
+  ['', 'Priority'],
+  ['highest', `${PRIORITY_EMOJI.highest} Highest`],
+  ['high', `${PRIORITY_EMOJI.high} High`],
+  ['medium', `${PRIORITY_EMOJI.medium} Medium`],
+  ['low', `${PRIORITY_EMOJI.low} Low`],
+  ['lowest', `${PRIORITY_EMOJI.lowest} Lowest`],
 ];
 
 function shortLabel(options: readonly [string, string][], value: string): string {
@@ -203,7 +203,7 @@ export class TaskPanel {
     const search = searchWrap.createEl('input', {
       cls: 'runway-search__input',
       type: 'search',
-      placeholder: 'Cerca…',
+      placeholder: 'Search…',
       value: this.state.filter.text,
     });
     search.addEventListener('input', () => {
@@ -225,12 +225,12 @@ export class TaskPanel {
     const add = actions.createEl('button', { cls: 'runway-add-btn' });
     setIcon(add, 'plus');
     if (!this.options.compact) add.createSpan({ text: 'Task' });
-    add.setAttribute('aria-label', 'Nuovo task');
+    add.setAttribute('aria-label', 'New task');
     add.addEventListener('click', () => new QuickAddModal(this.ctx).open());
 
     const overflow = actions.createEl('button', { cls: 'runway-iconbtn' });
     setIcon(overflow, 'more-horizontal');
-    overflow.setAttribute('aria-label', 'Altro');
+    overflow.setAttribute('aria-label', 'More');
     overflow.addEventListener('click', (event) => this.openOverflowMenu(event));
 
     this.filtersEl = root.createDiv({ cls: 'runway-panel__filters' });
@@ -252,7 +252,7 @@ export class TaskPanel {
       const dayRow = bar.createDiv({ cls: 'runway-filterbar__row' });
       const pill = dayRow.createEl('button', {
         cls: 'runway-fchip is-active',
-        attr: { 'aria-label': 'Rimuovi filtro giorno' },
+        attr: { 'aria-label': 'Remove day filter' },
       });
       pill.createSpan({ cls: 'runway-fchip__label', text: `📅 ${this.state.filter.exactDay}` });
       const clear = pill.createSpan({ cls: 'runway-fchip__caret' });
@@ -264,7 +264,7 @@ export class TaskPanel {
       );
     }
 
-    // Primary: prominent time segments (Tutti · Oggi · Settimana · …).
+    // Primary: prominent time segments (All · Today · Week · …).
     // Rendered into the persistent header host so they share the search row.
     const segments = this.segmentsEl;
     if (segments) {
@@ -284,7 +284,7 @@ export class TaskPanel {
       }
     }
 
-    // Secondary: one "Filtri" chip (status + tag + folder + priority) + sort/group.
+    // Secondary: one "Filters" chip (status + tag + folder + priority) + sort/group.
     const controlRow = bar.createDiv({ cls: 'runway-filterbar__row' });
 
     const activeFilters = this.activeFilterCount();
@@ -295,19 +295,19 @@ export class TaskPanel {
     setIcon(filterIcon, 'filter');
     filterChip.createSpan({
       cls: 'runway-fchip__label',
-      text: activeFilters > 0 ? `Filtri (${activeFilters})` : 'Filtri',
+      text: activeFilters > 0 ? `Filters (${activeFilters})` : 'Filters',
     });
     const filterCaret = filterChip.createSpan({ cls: 'runway-fchip__caret' });
     setIcon(filterCaret, 'chevron-down');
     filterChip.addEventListener('click', (event) => this.openFiltersMenu(event));
 
     const controlEnd = controlRow.createDiv({ cls: 'runway-filterbar__end' });
-    this.iconMenu(controlEnd, 'arrow-up-down', 'Ordina', SORT_OPTIONS, this.state.sort, (value) =>
+    this.iconMenu(controlEnd, 'arrow-up-down', 'Sort', SORT_OPTIONS, this.state.sort, (value) =>
       this.update(() => {
         this.state.sort = value;
       }),
     );
-    this.iconMenu(controlEnd, 'layout-list', 'Raggruppa', GROUP_OPTIONS, this.state.group, (value) =>
+    this.iconMenu(controlEnd, 'layout-list', 'Group', GROUP_OPTIONS, this.state.group, (value) =>
       this.update(() => {
         this.state.group = value;
         if (value === 'agenda') this.seedAgendaCollapse();
@@ -356,7 +356,7 @@ export class TaskPanel {
     const facets = this.facets();
 
     menu.addItem((item) => {
-      item.setTitle(`Stato · ${statusSummary(this.state.filter.statuses)}`).setIcon('circle-dot');
+      item.setTitle(`Status · ${statusSummary(this.state.filter.statuses)}`).setIcon('circle-dot');
       const sub = submenuOf(item);
       for (const [status, label] of STATUS_OPTIONS) {
         sub.addItem((sitem: MenuItem) =>
@@ -376,7 +376,7 @@ export class TaskPanel {
 
     menu.addItem((item) => {
       const current = this.state.filter.priorities?.[0] ?? '';
-      item.setTitle('Priorità').setIcon('flag');
+      item.setTitle('Priority').setIcon('flag');
       const sub = submenuOf(item);
       for (const [value, label] of PRIORITY_OPTIONS) {
         sub.addItem((sitem: MenuItem) =>
@@ -397,7 +397,7 @@ export class TaskPanel {
       const sub = submenuOf(item);
       sub.addItem((sitem: MenuItem) =>
         sitem
-          .setTitle('Tutti i tag')
+          .setTitle('All tags')
           .setChecked(this.state.filter.tags.length === 0)
           .onClick(() => this.update(() => (this.state.filter.tags = []))),
       );
@@ -412,11 +412,11 @@ export class TaskPanel {
     });
 
     menu.addItem((item) => {
-      item.setTitle('Cartella').setIcon('folder');
+      item.setTitle('Folder').setIcon('folder');
       const sub = submenuOf(item);
       sub.addItem((sitem: MenuItem) =>
         sitem
-          .setTitle('Tutte le cartelle')
+          .setTitle('All folders')
           .setChecked(this.state.filter.folder === null)
           .onClick(() => this.update(() => (this.state.filter.folder = null))),
       );
@@ -434,7 +434,7 @@ export class TaskPanel {
       menu.addSeparator();
       menu.addItem((item) =>
         item
-          .setTitle('Azzera filtri')
+          .setTitle('Clear filters')
           .setIcon('filter-x')
           .onClick(() =>
             this.update(() => {
@@ -455,10 +455,10 @@ export class TaskPanel {
     const menu = new Menu();
 
     menu.addItem((item) => {
-      item.setTitle('Viste salvate').setIcon('bookmark');
+      item.setTitle('Saved views').setIcon('bookmark');
       const sub = submenuOf(item);
       if (this.ctx.settings.savedViews.length === 0) {
-        sub.addItem((sitem: MenuItem) => sitem.setTitle('Nessuna vista').setDisabled(true));
+        sub.addItem((sitem: MenuItem) => sitem.setTitle('No saved views').setDisabled(true));
       }
       for (const view of this.ctx.settings.savedViews) {
         sub.addItem((sitem: MenuItem) => sitem.setTitle(view.name).onClick(() => this.applyView(view)));
@@ -466,7 +466,7 @@ export class TaskPanel {
       sub.addSeparator();
       sub.addItem((sitem: MenuItem) =>
         sitem
-          .setTitle('Salva vista corrente…')
+          .setTitle('Save current view…')
           .setIcon('save')
           .onClick(() => this.saveCurrentView()),
       );
@@ -476,7 +476,7 @@ export class TaskPanel {
       const anyOpen = this.lastGroupKeys.some((key) => !this.collapsed.has(key));
       menu.addItem((item) =>
         item
-          .setTitle(anyOpen ? 'Comprimi tutto' : 'Espandi tutto')
+          .setTitle(anyOpen ? 'Collapse all' : 'Expand all')
           .setIcon(anyOpen ? 'chevrons-down-up' : 'chevrons-up-down')
           .onClick(() => this.toggleAll()),
       );
@@ -485,7 +485,7 @@ export class TaskPanel {
     if (this.options.onExpand) {
       menu.addItem((item) =>
         item
-          .setTitle('Apri lista completa')
+          .setTitle('Open full list')
           .setIcon('maximize-2')
           .onClick(() => this.options.onExpand?.()),
       );
@@ -515,7 +515,7 @@ export class TaskPanel {
     this.taskByKey = new Map();
 
     if (!this.ctx.index.isReady()) {
-      results.createDiv({ cls: 'runway-empty', text: 'Indicizzazione…' });
+      results.createDiv({ cls: 'runway-empty', text: 'Indexing…' });
       return;
     }
 
@@ -542,7 +542,7 @@ export class TaskPanel {
     if (total === 0) {
       this.cursor = -1;
       this.renderBulkBar();
-      results.createDiv({ cls: 'runway-empty', text: 'Nessun task corrisponde ai filtri.' });
+      results.createDiv({ cls: 'runway-empty', text: 'No task matches the filters.' });
       return;
     }
 
@@ -578,14 +578,14 @@ export class TaskPanel {
         const spacer = head.createDiv({ cls: 'runway-group__actions' });
         const addHere = spacer.createSpan({ cls: 'runway-group__act' });
         setIcon(addHere, 'plus');
-        addHere.setAttribute('aria-label', 'Nuovo task in questa nota');
+        addHere.setAttribute('aria-label', 'New task in this note');
         addHere.addEventListener('click', (event) => {
           event.stopPropagation();
           new QuickAddModal(this.ctx, notePath).open();
         });
         const open = spacer.createSpan({ cls: 'runway-group__act' });
         setIcon(open, 'file-symlink');
-        open.setAttribute('aria-label', 'Apri nota');
+        open.setAttribute('aria-label', 'Open note');
         open.addEventListener('click', (event) => {
           event.stopPropagation();
           const file = this.ctx.app.vault.getFileByPath(notePath);
@@ -642,7 +642,7 @@ export class TaskPanel {
     if (tasks.length > visible.length) {
       const more = body.createEl('button', {
         cls: 'runway-group__more',
-        text: `Mostra altri ${tasks.length - visible.length}`,
+        text: `Show ${tasks.length - visible.length} more`,
       });
       more.addEventListener('click', () => {
         this.expanded.add(key);
@@ -772,7 +772,7 @@ export class TaskPanel {
   private editCursor(): void {
     const task = this.cursorTask();
     if (!task) return;
-    promptText(this.ctx.app, 'Modifica task', task.description, (text) => {
+    promptText(this.ctx.app, 'Edit task', task.description, (text) => {
       void this.ctx.edits.editDescription(refOf(task), text);
     });
   }
@@ -789,13 +789,13 @@ export class TaskPanel {
     bar.toggleClass('is-hidden', this.selection.size === 0);
     if (this.selection.size === 0) return;
 
-    bar.createSpan({ cls: 'runway-bulkbar__count', text: `${this.selection.size} selezionati` });
+    bar.createSpan({ cls: 'runway-bulkbar__count', text: `${this.selection.size} selected` });
     const actions = bar.createDiv({ cls: 'runway-bulkbar__actions' });
 
-    const complete = actions.createEl('button', { cls: 'runway-pill', text: 'Completa' });
+    const complete = actions.createEl('button', { cls: 'runway-pill', text: 'Complete' });
     complete.addEventListener('click', () => void this.completeTargets());
 
-    const reschedule = actions.createEl('button', { cls: 'runway-pill', text: 'Rischedula' });
+    const reschedule = actions.createEl('button', { cls: 'runway-pill', text: 'Reschedule' });
     reschedule.addEventListener('click', (event) => {
       const targets = this.targets();
       showDateMenu(event, this.ctx.app, undefined, {
@@ -808,10 +808,10 @@ export class TaskPanel {
       });
     });
 
-    const move = actions.createEl('button', { cls: 'runway-pill', text: 'Sposta' });
+    const move = actions.createEl('button', { cls: 'runway-pill', text: 'Move' });
     move.addEventListener('click', () => {
       const targets = this.targets();
-      pickNote(this.ctx.app, 'Sposta i task in…', (file) => {
+      pickNote(this.ctx.app, 'Move tasks to…', (file) => {
         void (async () => {
           for (const task of targets) await this.ctx.edits.moveToNote(refOf(task), file.path);
           this.clearSelection();
@@ -821,7 +821,7 @@ export class TaskPanel {
 
     const clear = actions.createEl('button', { cls: 'runway-iconbtn' });
     setIcon(clear, 'x');
-    clear.setAttribute('aria-label', 'Deseleziona');
+    clear.setAttribute('aria-label', 'Deselect');
     clear.addEventListener('click', () => this.clearSelection());
   }
 
@@ -861,7 +861,7 @@ export class TaskPanel {
   }
 
   private saveCurrentView(): void {
-    promptText(this.ctx.app, 'Nome della vista', '', (name) => {
+    promptText(this.ctx.app, 'View name', '', (name) => {
       const view: SavedView = {
         name,
         filter: { ...this.state.filter },
@@ -872,7 +872,7 @@ export class TaskPanel {
       if (existing >= 0) this.ctx.settings.savedViews[existing] = view;
       else this.ctx.settings.savedViews.push(view);
       void this.ctx.saveSettings();
-      new Notice(`Runway: vista "${name}" salvata.`);
+      new Notice(`Runway: view "${name}" saved.`);
     });
   }
 

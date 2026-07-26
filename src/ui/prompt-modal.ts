@@ -31,7 +31,7 @@ class PromptModal extends Modal {
       value: this.initial,
     });
     const buttons = this.contentEl.createDiv({ cls: 'modal-button-container' });
-    const save = buttons.createEl('button', { cls: 'mod-cta', text: 'Salva' });
+    const save = buttons.createEl('button', { cls: 'mod-cta', text: 'Save' });
     const submit = (): void => {
       const value = input.value.trim();
       this.close();
@@ -41,7 +41,7 @@ class PromptModal extends Modal {
     input.addEventListener('keydown', (event) => {
       if (event.key === 'Enter') submit();
     });
-    buttons.createEl('button', { text: 'Annulla' }).addEventListener('click', () => this.close());
+    buttons.createEl('button', { text: 'Cancel' }).addEventListener('click', () => this.close());
     input.focus();
     input.select();
   }

@@ -17,8 +17,8 @@ export class RunwaySettingTab extends PluginSettingTab {
     containerEl.empty();
 
     new Setting(containerEl)
-      .setName('Cartelle escluse')
-      .setDesc('Una per riga. I task in queste cartelle non vengono indicizzati.')
+      .setName('Excluded folders')
+      .setDesc('One per line. Tasks in these folders are not indexed.')
       .addTextArea((text) => {
         text
           .setValue(this.plugin.settings.excludeFolders.join('\n'))
@@ -33,8 +33,8 @@ export class RunwaySettingTab extends PluginSettingTab {
       });
 
     new Setting(containerEl)
-      .setName('Cartelle Inbox')
-      .setDesc('Una per riga. I task in queste cartelle finiscono nella sezione Inbox del raggruppamento per nota.')
+      .setName('Inbox folders')
+      .setDesc('One per line. Tasks in these folders land in the Inbox section of the group-by-note view.')
       .addTextArea((text) => {
         text
           .setValue(this.plugin.settings.inboxFolders.join('\n'))
@@ -49,8 +49,8 @@ export class RunwaySettingTab extends PluginSettingTab {
       });
 
     new Setting(containerEl)
-      .setName('Giorni "Prossimi" in sidebar')
-      .setDesc('Orizzonte della sezione Upcoming nella sidebar (0 per nasconderla).')
+      .setName('"Upcoming" days in sidebar')
+      .setDesc('Horizon of the Upcoming section in the sidebar (0 to hide it).')
       .addSlider((slider) =>
         slider
           .setLimits(0, 31, 1)
@@ -63,8 +63,8 @@ export class RunwaySettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName('Orizzonte Agenda')
-      .setDesc('Giorni futuri mostrati come bucket singoli nel raggruppamento Agenda, prima di "Later".')
+      .setName('Agenda horizon')
+      .setDesc('Future days shown as individual buckets in the Agenda grouping, before "Later".')
       .addSlider((slider) =>
         slider
           .setLimits(1, 60, 1)
@@ -77,8 +77,8 @@ export class RunwaySettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName('Cartella daily note')
-      .setDesc('Destinazione di default del quick-add.')
+      .setName('Daily note folder')
+      .setDesc('Default target for quick-add.')
       .addText((text) =>
         text.setValue(this.plugin.settings.dailyFolder).onChange(async (value) => {
           this.plugin.settings.dailyFolder = value.trim();
@@ -87,8 +87,8 @@ export class RunwaySettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName('Formato daily note')
-      .setDesc('Token supportati: DD, MM, YYYY.')
+      .setName('Daily note format')
+      .setDesc('Supported tokens: DD, MM, YYYY.')
       .addText((text) =>
         text.setValue(this.plugin.settings.dailyFormat).onChange(async (value) => {
           this.plugin.settings.dailyFormat = value.trim();
@@ -97,8 +97,8 @@ export class RunwaySettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName('Heading quick-add')
-      .setDesc('Se presente nella nota, il task viene inserito sotto questo heading (es. "## Tasks"). Vuoto = fine nota.')
+      .setName('Quick-add heading')
+      .setDesc('If present in the note, the task is inserted under this heading (e.g. "## Tasks"). Empty = end of note.')
       .addText((text) =>
         text.setValue(this.plugin.settings.quickAddHeading).onChange(async (value) => {
           this.plugin.settings.quickAddHeading = value.trim();
@@ -107,10 +107,10 @@ export class RunwaySettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName('Ordinamento di default')
+      .setName('Default sort')
       .addDropdown((dropdown) =>
         dropdown
-          .addOptions({ due: 'Per scadenza', priority: 'Per priorità', path: 'Per nota' })
+          .addOptions({ due: 'By due date', priority: 'By priority', path: 'By note' })
           .setValue(this.plugin.settings.defaultSort)
           .onChange(async (value) => {
             this.plugin.settings.defaultSort = value as TaskSort;
@@ -119,17 +119,17 @@ export class RunwaySettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName('Raggruppamento di default')
+      .setName('Default grouping')
       .addDropdown((dropdown) =>
         dropdown
           .addOptions({
-            note: 'Per nota',
-            none: 'Nessuno',
-            date: 'Per data',
+            note: 'By note',
+            none: 'None',
+            date: 'By date',
             agenda: 'Agenda',
-            priority: 'Per priorità',
-            tag: 'Per tag',
-            folder: 'Per cartella',
+            priority: 'By priority',
+            tag: 'By tag',
+            folder: 'By folder',
           })
           .setValue(this.plugin.settings.defaultGroup)
           .onChange(async (value) => {
@@ -139,12 +139,12 @@ export class RunwaySettingTab extends PluginSettingTab {
       );
 
     if (this.plugin.settings.savedViews.length > 0) {
-      new Setting(containerEl).setName('Viste salvate').setHeading();
+      new Setting(containerEl).setName('Saved views').setHeading();
       for (const view of this.plugin.settings.savedViews) {
         new Setting(containerEl).setName(view.name).addExtraButton((button) =>
           button
             .setIcon('trash')
-            .setTooltip('Elimina vista')
+            .setTooltip('Delete view')
             .onClick(async () => {
               this.plugin.settings.savedViews = this.plugin.settings.savedViews.filter(
                 (candidate) => candidate.name !== view.name,

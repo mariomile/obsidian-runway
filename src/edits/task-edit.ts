@@ -54,7 +54,7 @@ export class TaskEditService {
       const result = completeRecurring(ref.rawText, todayKey());
       if (result === null) {
         // Unsupported rule or no date to advance: don't risk the series.
-        new Notice('Runway: ricorrenza non gestita — apro il file.');
+        new Notice('Runway: unsupported recurrence — opening the file.');
         await this.openAtLine(ref);
         return false;
       }
@@ -62,7 +62,7 @@ export class TaskEditService {
         ref,
         () => `${result.nextLine}\n${result.completedLine}`,
       );
-      if (changed) new Notice('Runway: completato, prossima occorrenza creata.');
+      if (changed) new Notice('Runway: completed, next occurrence created.');
       return changed;
     }
     return this.editLine(ref, (line) => transitionStatus(line, target, todayKey()));
@@ -103,7 +103,7 @@ export class TaskEditService {
   async setNote(ref: TaskRef, text: string): Promise<boolean> {
     const file = this.app.vault.getFileByPath(ref.path);
     if (!file) {
-      new Notice('Runway: file non trovato.');
+      new Notice('Runway: file not found.');
       return false;
     }
     let changed = false;
@@ -127,7 +127,7 @@ export class TaskEditService {
       }
       return changed ? lines.join('\n') : content;
     });
-    if (!changed) new Notice('Runway: il task è cambiato nel frattempo — riprova.');
+    if (!changed) new Notice('Runway: the task changed in the meantime — try again.');
     return changed;
   }
 
@@ -141,7 +141,7 @@ export class TaskEditService {
     const path = targetPath ?? dailyNotePath(settings, today);
     const file = await this.ensureFile(path, today);
     if (!file) {
-      new Notice(`Runway: impossibile creare "${path}".`);
+      new Notice(`Runway: could not create "${path}".`);
       return null;
     }
     const taskLine = `- [ ] ${body.trim()}`;
@@ -160,12 +160,12 @@ export class TaskEditService {
     if (targetPath === ref.path) return false;
     const source = this.app.vault.getFileByPath(ref.path);
     if (!source) {
-      new Notice('Runway: file di origine non trovato.');
+      new Notice('Runway: source file not found.');
       return false;
     }
     const target = await this.ensureFile(targetPath, todayKey());
     if (!target) {
-      new Notice(`Runway: impossibile creare "${targetPath}".`);
+      new Notice(`Runway: could not create "${targetPath}".`);
       return false;
     }
     const movedLine = ref.rawText.replace(/^\s+/, '');
@@ -180,8 +180,8 @@ export class TaskEditService {
     });
     new Notice(
       removed
-        ? `Runway: task spostato in ${targetPath}.`
-        : 'Runway: copiato, ma la riga di origine è cambiata — controlla i duplicati.',
+        ? `Runway: task moved to ${targetPath}.`
+        : 'Runway: copied, but the source line changed — check for duplicates.',
     );
     return removed;
   }
@@ -240,7 +240,7 @@ export class TaskEditService {
   ): Promise<boolean> {
     const file = this.app.vault.getFileByPath(ref.path);
     if (!file) {
-      if (!options?.silent) new Notice('Runway: file non trovato.');
+      if (!options?.silent) new Notice('Runway: file not found.');
       return false;
     }
     let changed = false;
@@ -250,12 +250,12 @@ export class TaskEditService {
       return result.content;
     });
     if (!changed && !options?.silent) {
-      new Notice('Runway: il task è cambiato nel frattempo — riprova.');
+      new Notice('Runway: the task changed in the meantime — try again.');
     }
     return changed;
   }
 
-  /** Success Notice with a 10s "Annulla" that re-applies the old date through the same guards. */
+  /** Success Notice with a 10s "Undo" that re-applies the old date through the same guards. */
   private noticeWithUndo(
     ref: TaskRef,
     emoji: DateEmoji,
@@ -263,19 +263,19 @@ export class TaskEditService {
     oldDate: DayKey | undefined,
   ): void {
     const fragment = document.createDocumentFragment();
-    fragment.createSpan({ text: `Runway: task spostato al ${newDate}. ` });
+    fragment.createSpan({ text: `Runway: task moved to ${newDate}. ` });
     if (oldDate === undefined) {
       new Notice(fragment, 10_000);
       return;
     }
-    const undo = fragment.createEl('a', { text: 'Annulla' });
+    const undo = fragment.createEl('a', { text: 'Undo' });
     const notice = new Notice(fragment, 10_000);
     undo.addEventListener('click', () => {
       notice.hide();
       const movedRef: TaskRef = { ...ref, rawText: rewriteDate(ref.rawText, emoji, newDate) };
       void this.reschedule(movedRef, oldDate, emoji, { silent: true }).then((ok) => {
         new Notice(
-          ok ? `Runway: ripristinato al ${oldDate}.` : 'Runway: annullamento non riuscito.',
+          ok ? `Runway: restored to ${oldDate}.` : 'Runway: undo failed.',
         );
       });
     });

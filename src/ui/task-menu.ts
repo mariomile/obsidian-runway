@@ -20,14 +20,14 @@ class EditDescriptionModal extends Modal {
   }
 
   onOpen(): void {
-    this.titleEl.setText('Modifica task');
+    this.titleEl.setText('Edit task');
     const input = this.contentEl.createEl('input', {
       cls: 'runway-edit-input',
       type: 'text',
       value: this.initial,
     });
     const buttons = this.contentEl.createDiv({ cls: 'modal-button-container' });
-    const save = buttons.createEl('button', { cls: 'mod-cta', text: 'Salva' });
+    const save = buttons.createEl('button', { cls: 'mod-cta', text: 'Save' });
     const submit = (): void => {
       const value = input.value.trim();
       if (value !== '' && value !== this.initial) {
@@ -41,7 +41,7 @@ class EditDescriptionModal extends Modal {
     input.addEventListener('keydown', (event) => {
       if (event.key === 'Enter') submit();
     });
-    buttons.createEl('button', { text: 'Annulla' }).addEventListener('click', () => this.close());
+    buttons.createEl('button', { text: 'Cancel' }).addEventListener('click', () => this.close());
     input.focus();
     input.select();
   }
@@ -52,19 +52,19 @@ class EditDescriptionModal extends Modal {
 }
 
 const STATUS_ITEMS: [Exclude<TaskStatus, 'unknown'>, string, string][] = [
-  ['todo', 'Da fare', 'circle'],
-  ['in-progress', 'In corso', 'circle-dot'],
-  ['done', 'Fatto', 'check-circle'],
-  ['cancelled', 'Annullato', 'x-circle'],
+  ['todo', 'To do', 'circle'],
+  ['in-progress', 'In progress', 'circle-dot'],
+  ['done', 'Done', 'check-circle'],
+  ['cancelled', 'Cancelled', 'x-circle'],
 ];
 
 const PRIORITY_ITEMS: [Priority | null, string][] = [
-  ['highest', `${PRIORITY_EMOJI.highest} Massima`],
-  ['high', `${PRIORITY_EMOJI.high} Alta`],
-  ['medium', `${PRIORITY_EMOJI.medium} Media`],
-  ['low', `${PRIORITY_EMOJI.low} Bassa`],
-  ['lowest', `${PRIORITY_EMOJI.lowest} Minima`],
-  [null, 'Nessuna priorità'],
+  ['highest', `${PRIORITY_EMOJI.highest} Highest`],
+  ['high', `${PRIORITY_EMOJI.high} High`],
+  ['medium', `${PRIORITY_EMOJI.medium} Medium`],
+  ['low', `${PRIORITY_EMOJI.low} Low`],
+  ['lowest', `${PRIORITY_EMOJI.lowest} Lowest`],
+  [null, 'No priority'],
 ];
 
 export function refOf(task: Task): TaskRef {
@@ -73,7 +73,7 @@ export function refOf(task: Task): TaskRef {
 
 /** Prompt for a task note (add or edit) and write it as an indented child. */
 export function promptTaskNote(ctx: RunwayContext, task: Task): void {
-  promptText(ctx.app, task.note ? 'Modifica nota' : 'Aggiungi nota', task.note ?? '', (text) => {
+  promptText(ctx.app, task.note ? 'Edit note' : 'Add note', task.note ?? '', (text) => {
     void ctx.edits.setNote(refOf(task), text);
   });
 }
@@ -84,7 +84,7 @@ export function showTaskMenu(event: MouseEvent, ctx: RunwayContext, task: Task):
 
   menu.addItem((item) =>
     item
-      .setTitle('Apri nel file')
+      .setTitle('Open in file')
       .setIcon('file-symlink')
       .onClick(() => void ctx.edits.openAtLine(ref)),
   );
@@ -118,7 +118,7 @@ export function showTaskMenu(event: MouseEvent, ctx: RunwayContext, task: Task):
     menu.addSeparator();
     menu.addItem((item) =>
       item
-        .setTitle('Modifica testo…')
+        .setTitle('Edit text…')
         .setIcon('pencil')
         .onClick(() => {
           new EditDescriptionModal(ctx.app, task.description, (text) => {
@@ -128,24 +128,24 @@ export function showTaskMenu(event: MouseEvent, ctx: RunwayContext, task: Task):
     );
     menu.addItem((item) =>
       item
-        .setTitle(task.note ? 'Modifica nota…' : 'Aggiungi nota…')
+        .setTitle(task.note ? 'Edit note…' : 'Add note…')
         .setIcon('text')
         .onClick(() => promptTaskNote(ctx, task)),
     );
     if (task.note) {
       menu.addItem((item) =>
         item
-          .setTitle('Rimuovi nota')
+          .setTitle('Remove note')
           .setIcon('trash')
           .onClick(() => void ctx.edits.setNote(ref, '')),
       );
     }
     menu.addItem((item) =>
       item
-        .setTitle('Sposta in nota…')
+        .setTitle('Move to note…')
         .setIcon('folder-input')
         .onClick(() => {
-          pickNote(ctx.app, 'Sposta il task in…', (file) => {
+          pickNote(ctx.app, 'Move task to…', (file) => {
             void ctx.edits.moveToNote(ref, file.path);
           });
         }),

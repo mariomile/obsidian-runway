@@ -15,14 +15,14 @@ class PickDateModal extends Modal {
   }
 
   onOpen(): void {
-    this.titleEl.setText('Scegli data');
+    this.titleEl.setText('Choose date');
     const input = this.contentEl.createEl('input', {
       cls: 'runway-date-input',
       type: 'date',
       value: this.initial,
     });
     const buttons = this.contentEl.createDiv({ cls: 'modal-button-container' });
-    const confirm = buttons.createEl('button', { cls: 'mod-cta', text: 'Conferma' });
+    const confirm = buttons.createEl('button', { cls: 'mod-cta', text: 'Confirm' });
     const submit = (): void => {
       if (isValidDayKey(input.value)) {
         this.close();
@@ -33,7 +33,7 @@ class PickDateModal extends Modal {
     input.addEventListener('keydown', (event) => {
       if (event.key === 'Enter') submit();
     });
-    buttons.createEl('button', { text: 'Annulla' }).addEventListener('click', () => this.close());
+    buttons.createEl('button', { text: 'Cancel' }).addEventListener('click', () => this.close());
     input.focus();
   }
 
@@ -47,7 +47,7 @@ export interface DateMenuHandlers {
   onClear?(): void;
 }
 
-/** Shared reschedule menu: Oggi / Domani / +1 settimana / picker / rimuovi. */
+/** Shared reschedule menu: Today / Tomorrow / +1 week / picker / clear. */
 export function buildDateMenuItems(
   menu: Menu,
   app: App,
@@ -56,9 +56,9 @@ export function buildDateMenuItems(
 ): void {
   const today = todayKey();
   const presets: [string, DayKey][] = [
-    ['Oggi', today],
-    ['Domani', addDays(today, 1)],
-    ['+1 settimana', addDays(today, 7)],
+    ['Today', today],
+    ['Tomorrow', addDays(today, 1)],
+    ['+1 week', addDays(today, 7)],
   ];
   for (const [label, date] of presets) {
     menu.addItem((item) =>
@@ -70,7 +70,7 @@ export function buildDateMenuItems(
   }
   menu.addItem((item) =>
     item
-      .setTitle('Scegli data…')
+      .setTitle('Choose date…')
       .setIcon('calendar-search')
       .onClick(() => {
         new PickDateModal(app, current ?? today, handlers.onPick).open();
@@ -79,7 +79,7 @@ export function buildDateMenuItems(
   if (handlers.onClear && current !== undefined) {
     menu.addItem((item) =>
       item
-        .setTitle('Rimuovi data')
+        .setTitle('Remove date')
         .setIcon('calendar-off')
         .onClick(() => handlers.onClear?.()),
     );

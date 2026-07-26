@@ -37,28 +37,28 @@ export default class RunwayPlugin extends Plugin {
     this.registerView(VIEW_TYPE_SIDEBAR, (leaf) => new RunwaySidebarView(leaf, ctx));
     this.registerView(VIEW_TYPE_LIST, (leaf) => new RunwayListView(leaf, ctx));
 
-    this.addRibbonIcon('plane-takeoff', 'Runway: apri lista task', () => {
+    this.addRibbonIcon('plane-takeoff', 'Runway: open task list', () => {
       void this.openListView();
     });
 
     this.addCommand({
       id: 'open-list',
-      name: 'Apri lista task',
+      name: 'Open task list',
       callback: () => void this.openListView(),
     });
     this.addCommand({
       id: 'open-sidebar',
-      name: 'Apri sidebar task',
+      name: 'Open task sidebar',
       callback: () => void this.openSidebarView(),
     });
     this.addCommand({
       id: 'quick-add',
-      name: 'Nuovo task (quick-add)',
+      name: 'New task (quick-add)',
       callback: () => new QuickAddModal(this.context()).open(),
     });
     this.addCommand({
       id: 'open-today',
-      name: 'Oggi (in ritardo + in scadenza)',
+      name: 'Today (overdue + due)',
       callback: () =>
         void this.openListView({
           filter: { ...structuredClone(DEFAULT_FILTER), due: 'today' },
@@ -67,7 +67,7 @@ export default class RunwayPlugin extends Plugin {
     });
     this.addCommand({
       id: 'open-upcoming',
-      name: 'Prossimi (agenda giorno per giorno)',
+      name: 'Upcoming (day-by-day agenda)',
       callback: () =>
         void this.openListView({
           filter: { ...structuredClone(DEFAULT_FILTER) },
@@ -100,7 +100,7 @@ export default class RunwayPlugin extends Plugin {
         return;
       }
       item.show();
-      item.setAttribute('aria-label', `${count} task in ritardo`);
+      item.setAttribute('aria-label', `${count} overdue task`);
       const icon = item.createSpan({ cls: 'runway-statusbar__icon' });
       setIcon(icon, 'alarm-clock');
       item.createSpan({ cls: 'runway-statusbar__count', text: ` ${count}` });

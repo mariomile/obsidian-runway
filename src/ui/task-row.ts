@@ -32,10 +32,10 @@ export function displayText(description: string): string {
 }
 
 const STATUS_LABEL: Record<string, string> = {
-  todo: 'Completa',
-  'in-progress': 'Completa',
-  done: 'Riapri',
-  cancelled: 'Riapri',
+  todo: 'Complete',
+  'in-progress': 'Complete',
+  done: 'Reopen',
+  cancelled: 'Reopen',
 };
 
 /** Dot-marked date chip (horizon semantic colors), clickable to reschedule. */
@@ -57,7 +57,7 @@ function renderDateChip(
   if (task.status === 'unknown') return;
   chip.setAttribute(
     'aria-label',
-    kind === 'due' ? 'Scadenza — clic per rischedulare' : 'Pianificato — clic per rischedulare',
+    kind === 'due' ? 'Due — click to reschedule' : 'Scheduled — click to reschedule',
   );
   chip.addEventListener('click', (event) => {
     event.stopPropagation();
@@ -84,7 +84,7 @@ export function renderTaskRow(
   const checkWrap = row.createDiv({ cls: 'runway-row__check' });
   checkWrap.createSpan({ cls: `runway-check runway-check--${task.status}` });
   if (task.status !== 'unknown') {
-    checkWrap.setAttribute('aria-label', STATUS_LABEL[task.status] ?? 'Completa');
+    checkWrap.setAttribute('aria-label', STATUS_LABEL[task.status] ?? 'Complete');
     checkWrap.addEventListener('click', (event) => {
       event.stopPropagation();
       const target = task.status === 'done' ? 'todo' : 'done';
@@ -95,7 +95,7 @@ export function renderTaskRow(
   const main = row.createDiv({ cls: 'runway-row__main' });
   const desc = main.createDiv({
     cls: 'runway-row__desc',
-    text: displayText(task.description) || '(senza testo)',
+    text: displayText(task.description) || '(no text)',
   });
   desc.addEventListener('click', () => void ctx.edits.openAtLine(ref));
 
@@ -104,7 +104,7 @@ export function renderTaskRow(
     meta.createSpan({
       cls: `runway-chip runway-chip--priority`,
       text: PRIORITY_EMOJI[task.priority],
-      attr: { 'aria-label': `Priorità: ${task.priority}` },
+      attr: { 'aria-label': `Priority: ${task.priority}` },
     });
   }
   if (task.due !== undefined) {
@@ -129,7 +129,7 @@ export function renderTaskRow(
     const noteEl = main.createDiv({ cls: 'runway-row__note' });
     setIcon(noteEl.createSpan({ cls: 'runway-row__note-icon' }), 'text');
     noteEl.createSpan({ cls: 'runway-row__note-text', text: task.note });
-    noteEl.setAttribute('aria-label', 'Modifica nota');
+    noteEl.setAttribute('aria-label', 'Edit note');
     noteEl.addEventListener('click', (event) => {
       event.stopPropagation();
       promptTaskNote(ctx, task);
@@ -142,7 +142,7 @@ export function renderTaskRow(
   });
   const more = row.createDiv({ cls: 'runway-row__more' });
   setIcon(more, 'more-horizontal');
-  more.setAttribute('aria-label', 'Azioni');
+  more.setAttribute('aria-label', 'Actions');
   more.addEventListener('click', (event) => {
     event.stopPropagation();
     showTaskMenu(event, ctx, task);

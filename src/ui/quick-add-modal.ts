@@ -24,12 +24,12 @@ export class QuickAddModal extends Modal {
 
   onOpen(): void {
     this.modalEl.addClass('runway-quick-add');
-    this.titleEl.setText('Nuovo task');
+    this.titleEl.setText('New task');
 
     const input = this.contentEl.createEl('input', {
       cls: 'runway-quick-add__input',
       type: 'text',
-      placeholder: 'Descrizione — prova "chiama Marco domani"',
+      placeholder: 'Description — try "call Marco tomorrow"',
     });
     const hint = this.contentEl.createDiv({ cls: 'runway-quick-add__hint' });
     input.addEventListener('input', () => {
@@ -40,10 +40,10 @@ export class QuickAddModal extends Modal {
     const today = todayKey();
     const chips = this.contentEl.createDiv({ cls: 'runway-quick-add__chips' });
     const dateChoices: [string, DayKey | null][] = [
-      ['Nessuna data', null],
-      ['Oggi', today],
-      ['Domani', addDays(today, 1)],
-      ['+1 settimana', addDays(today, 7)],
+      ['No date', null],
+      ['Today', today],
+      ['Tomorrow', addDays(today, 1)],
+      ['+1 week', addDays(today, 7)],
     ];
     const chipEls: HTMLElement[] = [];
     for (const [label, date] of dateChoices) {
@@ -61,12 +61,12 @@ export class QuickAddModal extends Modal {
     const priorityRow = this.contentEl.createDiv({ cls: 'runway-quick-add__priority' });
     const select = priorityRow.createEl('select', { cls: 'dropdown' });
     const priorities: [string, Priority | ''][] = [
-      ['Nessuna priorità', ''],
-      [`${PRIORITY_EMOJI.highest} Massima`, 'highest'],
-      [`${PRIORITY_EMOJI.high} Alta`, 'high'],
-      [`${PRIORITY_EMOJI.medium} Media`, 'medium'],
-      [`${PRIORITY_EMOJI.low} Bassa`, 'low'],
-      [`${PRIORITY_EMOJI.lowest} Minima`, 'lowest'],
+      ['No priority', ''],
+      [`${PRIORITY_EMOJI.highest} Highest`, 'highest'],
+      [`${PRIORITY_EMOJI.high} High`, 'high'],
+      [`${PRIORITY_EMOJI.medium} Medium`, 'medium'],
+      [`${PRIORITY_EMOJI.low} Low`, 'low'],
+      [`${PRIORITY_EMOJI.lowest} Lowest`, 'lowest'],
     ];
     for (const [label, value] of priorities) {
       select.createEl('option', { text: label, value });
@@ -80,21 +80,21 @@ export class QuickAddModal extends Modal {
       cls: 'runway-quick-add__target-path',
       text: `→ ${this.targetPath ?? dailyNotePath(this.ctx.settings, today)}`,
     });
-    const change = targetRow.createEl('button', { text: 'Cambia' });
+    const change = targetRow.createEl('button', { text: 'Change' });
     change.addEventListener('click', () => {
-      pickNote(this.ctx.app, 'Nota di destinazione…', (file) => {
+      pickNote(this.ctx.app, 'Target note…', (file) => {
         this.targetPath = file.path;
         targetLabel.setText(`→ ${file.path}`);
       });
     });
 
     const buttons = this.contentEl.createDiv({ cls: 'modal-button-container' });
-    const submit = buttons.createEl('button', { cls: 'mod-cta', text: 'Aggiungi' });
+    const submit = buttons.createEl('button', { cls: 'mod-cta', text: 'Add' });
     submit.addEventListener('click', () => void this.submit());
     input.addEventListener('keydown', (event) => {
       if (event.key === 'Enter') void this.submit();
     });
-    buttons.createEl('button', { text: 'Annulla' }).addEventListener('click', () => this.close());
+    buttons.createEl('button', { text: 'Cancel' }).addEventListener('click', () => this.close());
     input.focus();
   }
 
@@ -123,7 +123,7 @@ export class QuickAddModal extends Modal {
     if (date !== null) body += ` 📅 ${date}`;
     this.close();
     const path = await this.ctx.edits.quickAdd(body, this.targetPath ?? undefined);
-    if (path !== null) new Notice(`Runway: task aggiunto a ${path}.`);
+    if (path !== null) new Notice(`Runway: task added to ${path}.`);
   }
 
   onClose(): void {
