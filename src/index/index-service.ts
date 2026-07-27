@@ -45,6 +45,8 @@ export class TaskIndexService {
   readonly core = new TaskIndexCore();
   private timer: ReturnType<typeof setTimeout> | null = null;
   private ready = false;
+  private scanGeneration = 0;
+  private stopped = true;
 
   constructor(app: App, isExcluded: (path: string) => boolean) {
     this.app = app;
@@ -64,6 +66,7 @@ export class TaskIndexService {
   }
 
   start(plugin: Plugin): void {
+    this.stopped = false;
     plugin.registerEvent(
       this.app.metadataCache.on('changed', (file, data, cache) => {
         if (this.isExcluded(file.path)) return;
@@ -94,28 +97,47 @@ export class TaskIndexService {
       }),
     );
     plugin.register(() => {
+      this.stopped = true;
+      this.scanGeneration += 1;
+      this.ready = false;
       if (this.timer !== null) clearTimeout(this.timer);
     });
     this.app.workspace.onLayoutReady(() => {
-      void this.initialScan();
+      if (!this.stopped) void this.initialScan();
     });
   }
 
   /** Swap the exclusion predicate (settings change) and rebuild. */
   async rescan(isExcluded: (path: string) => boolean): Promise<void> {
     this.isExcluded = isExcluded;
-    this.core.clear();
     await this.initialScan();
   }
 
-  private async indexFile(file: TFile): Promise<void> {
+  private async indexFile(file: TFile, generation?: number): Promise<void> {
     const cache = this.app.metadataCache.getFileCache(file);
     if (!cache) return;
-    const content = await this.app.vault.cachedRead(file);
-    this.core.setFile(file.path, extractTasks(file.path, content, cache));
+    try {
+      const content = await this.app.vault.cachedRead(file);
+      if (
+        this.stopped ||
+        (generation !== undefined && generation !== this.scanGeneration)
+      ) {
+        return;
+      }
+      this.core.setFile(file.path, extractTasks(file.path, content, cache));
+    } catch (error) {
+      // Rename/delete can race a queued read. A vanished file is expected;
+      // retain diagnostics only when the path still exists.
+      if (this.app.vault.getFileByPath(file.path)) {
+        console.warn(`Runway: failed to index ${file.path}`, error);
+      }
+    }
   }
 
   private async initialScan(): Promise<void> {
+    const generation = ++this.scanGeneration;
+    this.ready = false;
+    this.core.clear();
     const taskFiles: TFile[] = [];
     for (const file of this.app.vault.getMarkdownFiles()) {
       if (this.isExcluded(file.path)) continue;
@@ -125,8 +147,10 @@ export class TaskIndexService {
     }
     for (let i = 0; i < taskFiles.length; i += SCAN_CHUNK) {
       const chunk = taskFiles.slice(i, i + SCAN_CHUNK);
-      await Promise.all(chunk.map((file) => this.indexFile(file)));
+      await Promise.all(chunk.map((file) => this.indexFile(file, generation)));
+      if (this.stopped || generation !== this.scanGeneration) return;
     }
+    if (this.stopped || generation !== this.scanGeneration) return;
     this.ready = true;
     this.core.notify();
   }
