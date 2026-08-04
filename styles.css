@@ -20,10 +20,12 @@
   min-height: 0;
 }
 
-/* Suite preference (superbasetags): no focus ring on buttons, keyboard too.
-   Text inputs keep the accent ring on :focus-visible only. */
-.runway-panel :is(button, [role='button']):focus,
-.runway-panel :is(button, [role='button']):focus-visible {
+/* Nessun anello di fuoco su un click col mouse: è rumore, il puntatore sa già
+   dov'è. Su :focus-visible l'anello RESTA — è l'unica traccia di dove si trova
+   chi naviga da tastiera, e i primitivi (mv-chip, mv-icon-btn, mv-seg) lo
+   dichiarano apposta. Prima questa regola azzerava anche quello, e con
+   `[role='button']` avrebbe spento il ring di ogni div-bottone del kit. */
+.runway-panel :is(button, [role='button']):focus:not(:focus-visible) {
   outline: none !important;
   box-shadow: none !important;
 }
@@ -100,75 +102,50 @@
   gap: 4px;
 }
 
-/* Compact: equal-width segments filling the sidebar on one row */
+/* Compact: la pista occupa la larghezza della sidebar e i pill si dividono lo
+   spazio in parti uguali. Solo il flusso — altezza e padding restano del
+   primitivo: un override qui pareggerebbe la specificità e perderebbe comunque
+   per ordine di sorgente, visto che il blocco vendored sta in fondo al file. */
 .runway-panel--compact .runway-segments {
   display: flex;
   width: 100%;
-  gap: 1px;
 }
 
 .runway-panel--compact .runway-segment {
   flex: 1;
-  height: 24px;
-  padding: 0 4px;
+  min-width: 0;
   text-align: center;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.runway-panel--compact .runway-fchip,
-.runway-panel--compact .runway-search__input {
-  height: 28px;
-}
-
 /* ── Icon buttons + add ──────────────────────────────────────────────── */
 
-.runway-iconbtn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 26px;
-  height: 26px;
-  padding: 0;
-  border: none;
-  border-radius: var(--radius-s);
-  background: transparent;
-  color: var(--text-muted);
-  cursor: var(--cursor);
-  box-shadow: none;
-  transition: background-color var(--runway-t), color var(--runway-t);
-}
-
-/* mv-kit §6: :hover on a phone-reachable element must live inside
-   @media (hover: hover) — a bare rule fires on tap and leaves the wash
-   "stuck" until an unrelated tap elsewhere, since touch has no pointer to
-   leave. */
-@media (hover: hover) {
-  .runway-iconbtn:hover {
-    background: var(--background-modifier-hover);
-    color: var(--text-normal);
-  }
-}
+/* `.runway-iconbtn` non ha più stile proprio: scatola, hover, focus e misura
+   del glifo vengono da `.mv-icon-btn` (blocco vendored in fondo al file).
+   Resta come gancio per lo stato nascosto qui sotto. */
 
 .runway-iconbtn.is-hidden {
   display: none;
 }
 
-.runway-iconbtn .svg-icon {
-  width: 16px;
-  height: 16px;
-}
-
-.runway-add-btn {
+/* Selettore FIGLIO, non classe singola: `.runway-add-btn` da solo è (0,1,0) e
+   perde `background` contro `button:not(.clickable-icon)` di app.css, che è
+   (0,1,1) — misurato il 2026-08-04, il bottone primario rendeva col fill grigio
+   generico del tema invece che con l'accento. Stessa leva di `.mv-seg`. */
+.runway-panel__actions > .runway-add-btn {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  height: 26px;
-  padding: 0 10px;
-  border-radius: var(--radius-s);
+  gap: var(--mv-control-gap, 6px);
+  /* L'unico controllo pieno d'accento della barra: è l'azione primaria, non un
+     filtro, quindi non è un chip. Ma la MISURA è la stessa di tutti gli altri,
+     altrimenti la riga si sfalsa. */
+  height: var(--mv-control-h, 30px);
+  padding: 0 var(--mv-control-pad, 8px);
+  border-radius: var(--mv-r1, 6px);
   background-color: var(--interactive-accent);
   color: var(--text-on-accent);
-  font-size: var(--font-ui-smaller);
+  font-size: var(--font-ui-small);
   font-weight: var(--font-medium);
   box-shadow: none;
   cursor: var(--cursor);
@@ -177,72 +154,36 @@
 
 /* mv-kit §6: gated, see the .runway-iconbtn:hover comment above. */
 @media (hover: hover) {
-  .runway-add-btn:hover {
+  .runway-panel__actions > .runway-add-btn:hover {
     background-color: var(--interactive-accent-hover);
   }
 }
 
 .runway-add-btn .svg-icon {
-  width: 15px;
-  height: 15px;
+  width: var(--mv-control-icon, 16px);
+  height: var(--mv-control-icon, 16px);
 }
 
-.runway-panel--compact .runway-add-btn {
-  width: 26px;
+.runway-panel--compact .runway-panel__actions > .runway-add-btn {
+  width: var(--mv-control-h, 30px);
   padding: 0;
   justify-content: center;
 }
 
 /* ── Search ──────────────────────────────────────────────────────────── */
+/* Il campo è `.mv-field`: geometria, icona interna, bordo e focus vengono dal
+   primitivo. Qui restano solo la larghezza nel flusso dell'header e il fatto
+   che in sidebar compatta il campo non ha tetto. Il primitivo vince con un
+   selettore figlio a (0,2,0), che è ciò che ha permesso di ritirare i CINQUE
+   !important che stavano qui: servivano solo a battere `input[type='search']`
+   di app.css, a (0,1,1). */
 
 .runway-search {
-  position: relative;
-  display: flex;
-  align-items: center;
-  flex: 1 1 auto;
-  min-width: 120px;
   max-width: 260px;
 }
 
 .runway-panel--compact .runway-search {
   max-width: none;
-}
-
-.runway-search__icon {
-  position: absolute;
-  z-index: 1;
-  left: 9px;
-  display: inline-flex;
-  color: var(--text-muted);
-  pointer-events: none;
-}
-
-.runway-search__icon .svg-icon {
-  width: 15px;
-  height: 15px;
-}
-
-.runway-panel .runway-search__input {
-  width: 100%;
-  min-width: 0;
-  height: 30px;
-  padding-inline: 30px 10px !important;
-  border: 1px solid var(--background-modifier-border) !important;
-  border-radius: var(--radius-s) !important;
-  background: var(--background-secondary) !important;
-  color: var(--text-normal);
-  font-size: var(--font-ui-smaller);
-  box-shadow: none !important;
-}
-
-.runway-panel .runway-search__input:focus {
-  outline: none !important;
-  box-shadow: none !important;
-}
-
-.runway-panel .runway-search__input:focus-visible {
-  outline: 2px solid var(--interactive-accent);
-  outline-offset: 1px;
 }
 
 /* ── Filter bar ──────────────────────────────────────────────────────── */
@@ -269,132 +210,17 @@
   margin-left: auto;
 }
 
-/* Time segments — the primary list slicer (Craft-style segmented control) */
-.runway-segments {
-  display: inline-flex;
-  gap: 2px;
-  padding: 2px;
-  border-radius: var(--radius-m);
-  background: var(--background-secondary);
-}
+/* Il segmentato è `.mv-seg`: pista, pill attivo, focus e misure vengono dal
+   primitivo di suite. `.runway-segments` resta solo come gancio di layout
+   (ordine e wrap nell'header, più in basso). Lo stato attivo viaggia su
+   aria-pressed: prima era la classe `.is-active`, che a uno screen reader non
+   diceva nulla. */
 
-.runway-segment {
-  height: 26px;
-  padding: 0 12px;
-  border: none;
-  border-radius: calc(var(--radius-m) - 2px);
-  background: transparent;
-  color: var(--text-muted);
-  font-size: var(--font-ui-smaller);
-  white-space: nowrap;
-  box-shadow: none;
-  cursor: var(--cursor);
-  transition: background-color var(--runway-t), color var(--runway-t);
-}
-
-/* mv-kit §6: gated, see the .runway-iconbtn:hover comment above. */
-@media (hover: hover) {
-  .runway-segment:hover:not(.is-active) {
-    color: var(--text-normal);
-  }
-}
-
-.runway-segment.is-active {
-  background: var(--background-primary);
-  color: var(--text-normal);
-  font-weight: var(--font-medium);
-  box-shadow: var(--shadow-s);
-}
-
-/* Status pills — compact, rounded, accent when active */
-.runway-pill {
-  height: 24px;
-  padding: 0 10px;
-  border-radius: 999px;
-  border: 1px solid var(--background-modifier-border);
-  background-color: var(--background-secondary);
-  color: var(--text-muted);
-  font-size: var(--font-ui-smaller);
-  box-shadow: none;
-  cursor: var(--cursor);
-  transition: background-color var(--runway-t), color var(--runway-t),
-    border-color var(--runway-t);
-}
-
-/* mv-kit §6: gated, see the .runway-iconbtn:hover comment above. */
-@media (hover: hover) {
-  .runway-pill:hover {
-    background-color: var(--background-modifier-hover);
-    color: var(--text-normal);
-  }
-}
-
-.runway-pill.is-active {
-  background-color: var(--interactive-accent);
-  border-color: var(--interactive-accent);
-  color: var(--text-on-accent);
-}
+/* Le pill della barra di selezione sono `.mv-chip.mv-chip--pill`; i chip di
+   filtro sono `.mv-chip`. Erano quattro implementazioni con tre altezze e due
+   raggi per due soli ruoli. */
 
 /* Menu-chips — the compact replacement for native selects */
-.runway-fchip {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  height: 26px;
-  max-width: 12em;
-  padding: 0 6px 0 8px;
-  border-radius: var(--radius-s);
-  border: 1px solid var(--background-modifier-border);
-  background-color: transparent;
-  color: var(--text-muted);
-  font-size: var(--font-ui-smaller);
-  box-shadow: none;
-  cursor: var(--cursor);
-  transition: background-color var(--runway-t), color var(--runway-t),
-    border-color var(--runway-t);
-}
-
-/* mv-kit §6: gated, see the .runway-iconbtn:hover comment above. */
-@media (hover: hover) {
-  .runway-fchip:hover {
-    background-color: var(--background-modifier-hover);
-    color: var(--text-normal);
-  }
-}
-
-.runway-fchip.is-active {
-  border-color: var(--interactive-accent);
-  color: var(--text-normal);
-  background-color: color-mix(in srgb, var(--interactive-accent) 12%, transparent);
-}
-
-.runway-fchip__icon {
-  display: inline-flex;
-  flex-shrink: 0;
-  color: var(--text-faint);
-}
-
-.runway-fchip__icon .svg-icon {
-  width: 13px;
-  height: 13px;
-}
-
-.runway-fchip__label {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.runway-fchip__caret {
-  display: inline-flex;
-  flex-shrink: 0;
-  color: var(--text-faint);
-}
-
-.runway-fchip__caret .svg-icon {
-  width: 12px;
-  height: 12px;
-}
 
 /* ── Results ─────────────────────────────────────────────────────────── */
 
@@ -906,33 +732,8 @@
   margin-bottom: var(--size-4-2);
 }
 
-.runway-quick-add__chip {
-  font-size: var(--font-ui-smaller);
-  height: 24px;
-  padding: 0 10px;
-  border-radius: 999px;
-  border: 1px solid var(--background-modifier-border);
-  background-color: var(--background-secondary);
-  color: var(--text-muted);
-  box-shadow: none;
-  cursor: var(--cursor);
-  transition: background-color var(--runway-t), color var(--runway-t),
-    border-color var(--runway-t);
-}
-
-/* mv-kit §6: gated, see the .runway-iconbtn:hover comment above. */
-@media (hover: hover) {
-  .runway-quick-add__chip:hover {
-    background-color: var(--background-modifier-hover);
-    color: var(--text-normal);
-  }
-}
-
-.runway-quick-add__chip.is-active {
-  background-color: var(--interactive-accent);
-  border-color: var(--interactive-accent);
-  color: var(--text-on-accent);
-}
+/* I chip della quick-add sono `.mv-chip.mv-chip--pill`: stesso ruolo delle
+   pill della barra di selezione, quindi stesso primitivo. */
 
 .runway-quick-add__priority {
   margin-bottom: var(--size-4-2);
@@ -999,16 +800,9 @@
   height: var(--cosmos-touch-min, 44px);
 }
 
-.is-mobile .runway-segment,
-.is-mobile .runway-fchip,
-.is-mobile .runway-iconbtn,
-.is-mobile .runway-pill {
-  min-height: var(--cosmos-touch-min, 44px);
-}
-
-.is-mobile .runway-panel .runway-search__input {
-  height: var(--cosmos-touch-min, 44px);
-}
+/* Segmentati, chip, bottoni-icona e campo prendono i 44pt e il press-scale dai
+   blocchi `.is-mobile` dei rispettivi primitivi, in fondo al file. Qui restano
+   i controlli che un primitivo non ce l'hanno. */
 
 /* mv-kit §3 MUST: tap targets confirm a press with a transform-only scale —
    composited, so it animates instead of snapping, and inherits
@@ -1016,10 +810,6 @@
 .is-mobile .runway-row__check:active,
 .is-mobile .runway-row__more:active,
 .is-mobile .runway-group__act:active,
-.is-mobile .runway-segment:active,
-.is-mobile .runway-fchip:active,
-.is-mobile .runway-iconbtn:active,
-.is-mobile .runway-pill:active,
 .is-mobile .runway-add-btn:active {
   transform: scale(var(--cosmos-press-scale, 0.98));
   transition: transform var(--cosmos-t-fast, 140ms) var(--cosmos-native, cubic-bezier(0.32, 0.72, 0, 1));
@@ -1038,3 +828,492 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+/* >>> VENDORED marioverse-kit/css/mv-seg.css — non editare qui >>> */
+/* marioverse-kit · mv-seg — controllo segmentato (uno-di-N).
+ *
+ * Un pill che siede in una pista incassata. Masonry, TabX, Horizon e Runway
+ * facevano lo stesso lavoro con quattro aspetti diversi nello stesso vault, e
+ * Runway per giunta con una convenzione di stato divergente (`.is-active`
+ * invece di aria-pressed), quindi non annunciava nulla a uno screen reader.
+ *
+ * CONVENZIONE DI STATO: `aria-pressed` (o `aria-selected`). Mai una classe.
+ * Lo stato di un controllo è informazione, non decorazione: se vive solo in
+ * una classe, esiste soltanto per chi vede.
+ *
+ * VINCOLI (intersezione dei contratti di stile dei consumatori):
+ *   · zero hex — `black`, `transparent`, color-mix()
+ *   · ogni ms/cubic-bezier dentro var(--token, …) sulla STESSA riga fisica
+ *   · zero !important — i ratchet dei plugin scendono soltanto
+ *   · ogni :hover dentro @media (hover: hover)
+ *   · knob interni --mvc-*, MAI --mv- o --cosmos-
+ *   · un blocco prefers-reduced-motion
+ *
+ * Consumatori: copia vendored in styles.css fra i marcatori, via sync.sh.
+ * Si modifica QUI.
+ */
+
+/* Il selettore FIGLIO non è cosmetico: app.css stila
+   `button:not(.clickable-icon)` a specificità (0,1,1), e una classe singola
+   (0,1,0) perde — è il motivo per cui masonry pagava tre !important su
+   .masonry-select. `.mv-seg > .mv-seg-item` è (0,2,0) e vince per peso
+   proprio. Non appiattirlo mai in un selettore solo. */
+.mv-seg {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: var(--mv-control-inset, 3px);
+  /* Concentrico: raggio esterno = raggio interno + padding. */
+  border-radius: calc(var(--mv-r1, 6px) + var(--mv-control-inset, 3px));
+  /* La pista è un INCASSO, quindi una velatura di nero: deve stare SOTTO la
+     superficie su cui poggia, qualunque essa sia. Prima usava
+     --background-modifier-hover, che è una velatura di BIANCO — misurato su
+     realcraft, la pista finiva a #2e2e2e e il pill attivo a #282828, cioè il
+     pill era più scuro della pista dentro cui sta. Stessa inversione delle
+     card, in miniatura. Una velatura translucida funziona su ogni palette
+     senza che ognuna debba dichiarare la propria pista. */
+  background: color-mix(in srgb, black 10%, transparent);
+}
+
+.mv-seg > .mv-seg-item {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--mv-control-gap, 6px);
+  /* Il pill è l'altezza di riga MENO l'inset della pista, non l'altezza di
+     riga: è la pista che deve tornare pari agli altri controlli della toolbar.
+     Vedi la nota sulla scala in cosmos-tokens.css. */
+  min-width: var(--mv-control-item-h, 24px);
+  height: var(--mv-control-item-h, 24px);
+  padding: 0 var(--mv-control-pad, 8px);
+  border: 0;
+  border-radius: var(--mv-r1, 6px);
+  background: transparent;
+  box-shadow: none;
+  color: var(--text-muted);
+  font-family: var(--font-interface);
+  font-size: var(--font-ui-small);
+  font-weight: var(--font-normal, 400);
+  cursor: var(--cursor, pointer);
+  transition:
+    background-color var(--cosmos-t-fast, 140ms) var(--mv-wash, cubic-bezier(0.25, 1, 0.5, 1)),
+    color var(--cosmos-t-fast, 140ms) var(--mv-wash, cubic-bezier(0.25, 1, 0.5, 1));
+}
+
+/* Il pill attivo usa --mv-card-bg, la superficie elevata del contratto, NON
+   --background-primary: su Cosmos dark il canvas È background-primary, e una
+   toolbar poggia sul canvas — misurato, il pill risultava più scuro dello
+   sfondo su cui stava, incassato invece che sollevato. */
+.mv-seg > .mv-seg-item[aria-pressed='true'],
+.mv-seg > .mv-seg-item[aria-selected='true'] {
+  background: var(--mv-card-bg, var(--background-primary));
+  box-shadow: var(--shadow-tactile);
+  color: var(--text-normal);
+  font-weight: var(--font-medium, 500);
+}
+
+@media (hover: hover) {
+  .mv-seg > .mv-seg-item:hover {
+    color: var(--text-normal);
+  }
+
+  .mv-seg > .mv-seg-item[aria-pressed='true']:hover,
+  .mv-seg > .mv-seg-item[aria-selected='true']:hover {
+    background: var(--mv-card-bg-hover, var(--background-primary));
+  }
+}
+
+.mv-seg > .mv-seg-item:focus-visible {
+  outline: var(--cosmos-focus-ring, 2px solid var(--interactive-accent));
+  outline-offset: var(--cosmos-focus-offset, 1px);
+}
+
+.mv-seg > .mv-seg-item .svg-icon {
+  width: var(--mv-control-icon, 16px);
+  height: var(--mv-control-icon, 16px);
+}
+
+/* Touch: `.is-mobile` è il segnale che usa Obsidian stesso, non
+   (pointer: coarse). Scelta di suite del 2026-08-04: coarse scatta anche su un
+   portatile touch dove il mouse resta il puntatore primario, e lì ingrandire i
+   controlli è sbagliato. */
+.is-mobile .mv-seg > .mv-seg-item {
+  min-width: var(--mv-control-h-touch, 44px);
+  height: var(--mv-control-h-touch, 44px);
+}
+
+.is-mobile .mv-seg > .mv-seg-item:active {
+  transform: scale(var(--cosmos-press-scale, 0.98));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mv-seg > .mv-seg-item {
+    transition-duration: 0.01ms;
+  }
+}
+/* <<< fine blocco vendored <<< */
+
+/* >>> VENDORED marioverse-kit/css/mv-icon-btn.css — non editare qui >>> */
+/* marioverse-kit · mv-icon-btn — bottone quadrato, solo icona.
+ *
+ * L'archetipo più ripetuto della suite, e il più divergente: Horizon lo faceva
+ * a 28px con `.horizon-cal__nav-btn`, Runway a 26px con `.runway-iconbtn`, e
+ * il date-picker di Horizon — stesso ruolo, stessa riga di header — usava
+ * `.clickable-icon` nudo, quindi senza box, raggio né hover. Tre trattamenti
+ * per un lavoro solo.
+ *
+ * Deliberatamente NON è `clickable-icon` di core: la sua area di tocco e il
+ * suo padding variano quanto basta a leggersi come un controllo di un'altra
+ * famiglia accanto al resto della chrome della suite.
+ *
+ * ⛔ VA SU UN <div role="button">, MAI SU UN <button>. Misurato il 2026-08-04:
+ * su un <button> una regola a classe singola (0,1,0) perde `background` e
+ * `padding` contro `button:not(.clickable-icon)` di app.css, che è (0,1,1) —
+ * passano solo height, border-color e radius, cioè si ottiene un controllo
+ * mezzo stilato. `.mv-seg` se lo può permettere perché il suo selettore figlio
+ * è (0,2,0); qui non c'è un genitore da cui prendere peso. Usa `makeButtonLike`
+ * (o equivalente) per role/tabIndex/aria-label e la tastiera.
+ *
+ * VINCOLI: vedi mv-seg.css. Consumatori via sync.sh; si modifica QUI.
+ */
+
+.mv-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: var(--mv-control-h, 28px);
+  height: var(--mv-control-h, 28px);
+  padding: 0;
+  border: 0;
+  border-radius: var(--mv-r1, 6px);
+  background: transparent;
+  box-shadow: none;
+  color: var(--text-muted);
+  cursor: var(--cursor, pointer);
+  transition:
+    background-color var(--cosmos-t-fast, 140ms) var(--mv-wash, cubic-bezier(0.25, 1, 0.5, 1)),
+    color var(--cosmos-t-fast, 140ms) var(--mv-wash, cubic-bezier(0.25, 1, 0.5, 1));
+}
+
+.mv-icon-btn .svg-icon {
+  width: var(--mv-control-icon, 16px);
+  height: var(--mv-control-icon, 16px);
+}
+
+@media (hover: hover) {
+  .mv-icon-btn:hover {
+    background: var(--background-modifier-hover);
+    color: var(--text-normal);
+  }
+}
+
+.mv-icon-btn:focus-visible {
+  outline: var(--cosmos-focus-ring, 2px solid var(--interactive-accent));
+  outline-offset: var(--cosmos-focus-offset, 1px);
+}
+
+/* Acceso — es. un filtro attivo, un pannello aperto. */
+.mv-icon-btn.is-on {
+  background: var(--background-modifier-hover);
+  color: var(--text-normal);
+}
+
+/* Rivelato all'hover del contenitore (azioni di riga, azioni di gruppo).
+   Su touch non esiste hover: `.is-mobile` le forza visibili più sotto. */
+.mv-icon-btn--reveal {
+  opacity: 0;
+  transition:
+    opacity var(--cosmos-t-fast, 140ms) var(--mv-wash, cubic-bezier(0.25, 1, 0.5, 1)),
+    background-color var(--cosmos-t-fast, 140ms) var(--mv-wash, cubic-bezier(0.25, 1, 0.5, 1)),
+    color var(--cosmos-t-fast, 140ms) var(--mv-wash, cubic-bezier(0.25, 1, 0.5, 1));
+}
+
+.mv-icon-btn--reveal:focus-visible {
+  opacity: 1;
+}
+
+/* Touch: il bersaglio cresce a 44pt SENZA ingrandire il glifo — un'icona da
+   16px dentro una scatola da 44 resta un'icona, non diventa un cartello.
+   `.is-mobile`, non (pointer: coarse): vedi la nota in mv-seg.css. */
+.is-mobile .mv-icon-btn {
+  width: var(--mv-control-h-touch, 44px);
+  height: var(--mv-control-h-touch, 44px);
+}
+
+.is-mobile .mv-icon-btn--reveal {
+  opacity: 1;
+}
+
+.is-mobile .mv-icon-btn:active {
+  transform: scale(var(--cosmos-press-scale, 0.98));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mv-icon-btn {
+    transition-duration: 0.01ms;
+  }
+}
+/* <<< fine blocco vendored <<< */
+
+/* >>> VENDORED marioverse-kit/css/mv-chip.css — non editare qui >>> */
+/* marioverse-kit · mv-chip — controllo a etichetta, con stato acceso/spento.
+ *
+ * Il filtro, il preset, il "Oggi", la scelta rapida. Diverso dal segmentato
+ * perché NON è uno-di-N: un chip può essere acceso da solo, o insieme ad altri.
+ * Per questo lo stato è `aria-pressed` su un toggle, mai `aria-selected`.
+ *
+ * Prima di questo file: Runway aveva `.runway-fchip` (bordo + tinta accento),
+ * `.runway-pill` (999px, sfondo secondario) e `.runway-quick-add__chip`
+ * (identico a pill ma dichiarato a parte); Horizon aveva
+ * `.horizon-view__today-btn`. Quattro implementazioni, tre altezze, due raggi.
+ *
+ * ⛔ VA SU UN <div role="button">, MAI SU UN <button> — stessa misura e stessa
+ * ragione documentate in mv-icon-btn.css: a classe singola un <button> perde
+ * `background` e `padding` contro app.css e resta stilato a metà.
+ *
+ * Due varianti, e la differenza è semantica, non estetica:
+ *   · default  — bordo hairline, per un chip che si accende (filtro, preset)
+ *   · --pill   — full-round e pieno, per un'AZIONE in una barra di selezione
+ *
+ * VINCOLI: vedi mv-seg.css. Consumatori via sync.sh; si modifica QUI.
+ */
+
+.mv-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--mv-control-gap, 6px);
+  height: var(--mv-control-h, 28px);
+  max-width: 14em;
+  padding: 0 var(--mv-control-pad, 8px);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--mv-r1, 6px);
+  background: transparent;
+  box-shadow: none;
+  color: var(--text-muted);
+  font-family: var(--font-interface);
+  font-size: var(--font-ui-small);
+  white-space: nowrap;
+  cursor: var(--cursor, pointer);
+  transition:
+    background-color var(--cosmos-t-fast, 140ms) var(--mv-wash, cubic-bezier(0.25, 1, 0.5, 1)),
+    border-color var(--cosmos-t-fast, 140ms) var(--mv-wash, cubic-bezier(0.25, 1, 0.5, 1)),
+    color var(--cosmos-t-fast, 140ms) var(--mv-wash, cubic-bezier(0.25, 1, 0.5, 1));
+}
+
+.mv-chip__label {
+  overflow: hidden;
+  min-width: 0;
+  text-overflow: ellipsis;
+}
+
+/* Slot icona a sinistra — dice DI COSA parla il chip. */
+.mv-chip__icon {
+  display: inline-flex;
+  flex: 0 0 auto;
+  color: var(--text-faint);
+}
+
+.mv-chip .svg-icon {
+  flex: 0 0 auto;
+  width: var(--mv-control-icon, 16px);
+  height: var(--mv-control-icon, 16px);
+  color: var(--text-faint);
+}
+
+/* Slot caret a destra — dice che il chip APRE un menu. Volutamente più piccolo
+   del glifo di sinistra: è un'indicazione di comportamento, non contenuto, e
+   alla stessa misura i due si leggerebbero come una coppia di icone. */
+.mv-chip__caret {
+  display: inline-flex;
+  flex: 0 0 auto;
+  margin-right: calc(var(--mv-control-pad, 8px) / -4);
+  color: var(--text-faint);
+}
+
+.mv-chip__caret .svg-icon {
+  width: calc(var(--mv-control-icon, 16px) * 0.75);
+  height: calc(var(--mv-control-icon, 16px) * 0.75);
+}
+
+/* Acceso: l'accento tinge il bordo e vela lo sfondo, non riempie. Un chip
+   pieno di accento urla quanto un bottone primario, e un filtro non è
+   l'azione principale di nessuna schermata. */
+.mv-chip.is-on {
+  border-color: var(--interactive-accent);
+  background: color-mix(in srgb, var(--interactive-accent) 12%, transparent);
+  color: var(--text-normal);
+}
+
+.mv-chip.is-on .svg-icon {
+  color: var(--text-muted);
+}
+
+@media (hover: hover) {
+  .mv-chip:hover {
+    border-color: var(--background-modifier-border-hover);
+    background: var(--background-modifier-hover);
+    color: var(--text-normal);
+  }
+
+  .mv-chip.is-on:hover {
+    background: color-mix(in srgb, var(--interactive-accent) 18%, transparent);
+  }
+}
+
+.mv-chip:focus-visible {
+  outline: var(--cosmos-focus-ring, 2px solid var(--interactive-accent));
+  outline-offset: var(--cosmos-focus-offset, 1px);
+}
+
+/* Variante AZIONE — full-round e piena. Vive nelle barre di selezione, dove
+   un comando deve leggersi come tale e non come un filtro spento. */
+.mv-chip--pill {
+  border-radius: 999px;
+  background: var(--background-secondary);
+}
+
+.mv-chip--pill.is-on {
+  border-color: var(--interactive-accent);
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+}
+
+@media (hover: hover) {
+  .mv-chip--pill.is-on:hover {
+    background: var(--interactive-accent-hover, var(--interactive-accent));
+  }
+}
+
+/* Touch: vedi la nota in mv-seg.css sul perché `.is-mobile` e non coarse. */
+.is-mobile .mv-chip {
+  height: var(--mv-control-h-touch, 44px);
+}
+
+.is-mobile .mv-chip:active {
+  transform: scale(var(--cosmos-press-scale, 0.98));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mv-chip {
+    transition-duration: 0.01ms;
+  }
+}
+/* <<< fine blocco vendored <<< */
+
+/* >>> VENDORED marioverse-kit/css/mv-field.css — non editare qui >>> */
+/* marioverse-kit · mv-field — campo di testo con icona interna (ricerca, filtro).
+ *
+ * Il wrapper esiste perché l'icona vive DENTRO il campo: `.mv-field` è il
+ * contesto di posizionamento, `.mv-field__icon` ci sta sopra e l'input si fa
+ * da parte con un padding sinistro. Senza wrapper l'unica alternativa è un
+ * background-image, che non prende il colore del tema.
+ *
+ * IL PUNTO DI QUESTO FILE È RITIRARE NOVE `!important`. Obsidian stila i campi
+ * con `input[type='search']` — un selettore di tipo+attributo, (0,1,1) — che
+ * batte una classe singola (0,1,0): per questo Masonry pagava 4 !important e
+ * Runway 5 solo per appiattire la chrome nativa. `.mv-field > .mv-field__input`
+ * è (0,2,0) e vince per peso proprio. Stessa leva di mv-seg.
+ *
+ * Il ratchet dei contratti scende soltanto: dopo la migrazione va ABBASSATO il
+ * tetto in style-contract.test.ts di ogni consumatore, altrimenti la vittoria
+ * non resta registrata e il prossimo !important rientra in silenzio.
+ *
+ * VINCOLI: vedi mv-seg.css. Consumatori via sync.sh; si modifica QUI.
+ */
+
+.mv-field {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.mv-field__icon {
+  position: absolute;
+  z-index: 1;
+  left: var(--mv-control-pad, 8px);
+  display: inline-flex;
+  color: var(--text-muted);
+  /* L'icona è un'insegna, non un bersaglio: il click deve cadere sull'input
+     che le sta sotto, altrimenti toccare la lente non mette a fuoco il campo. */
+  pointer-events: none;
+}
+
+.mv-field__icon .svg-icon {
+  width: var(--mv-control-icon, 16px);
+  height: var(--mv-control-icon, 16px);
+}
+
+.mv-field > .mv-field__input {
+  width: 100%;
+  min-width: 0;
+  height: var(--mv-control-h, 30px);
+  /* Sinistra = padding + icona + gap, così il cursore parte dopo il glifo. */
+  padding-inline:
+    calc(var(--mv-control-pad, 8px) + var(--mv-control-icon, 16px) + var(--mv-control-gap, 6px))
+    var(--mv-control-pad, 8px);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--mv-r1, 6px);
+  background: var(--background-secondary);
+  box-shadow: none;
+  color: var(--text-normal);
+  font-family: var(--font-interface);
+  font-size: var(--font-ui-small);
+  transition:
+    border-color var(--cosmos-t-fast, 140ms) var(--mv-wash, cubic-bezier(0.25, 1, 0.5, 1)),
+    background-color var(--cosmos-t-fast, 140ms) var(--mv-wash, cubic-bezier(0.25, 1, 0.5, 1));
+}
+
+/* Senza icona il padding torna simmetrico. */
+.mv-field--bare > .mv-field__input {
+  padding-inline: var(--mv-control-pad, 8px);
+}
+
+.mv-field > .mv-field__input::placeholder {
+  color: var(--text-faint);
+}
+
+@media (hover: hover) {
+  .mv-field > .mv-field__input:hover {
+    border-color: var(--background-modifier-border-hover);
+  }
+}
+
+/* :focus e :focus-visible sono separati apposta. Il focus di puntatore muove
+   solo il bordo — un anello di sistema su un click volontario è rumore; il
+   focus da tastiera prende l'anello, perché lì è l'unica traccia di dove si è. */
+.mv-field > .mv-field__input:focus {
+  outline: none;
+  border-color: var(--background-modifier-border-focus, var(--interactive-accent));
+  box-shadow: none;
+}
+
+.mv-field > .mv-field__input:focus-visible {
+  outline: var(--cosmos-focus-ring, 2px solid var(--interactive-accent));
+  outline-offset: var(--cosmos-focus-offset, 1px);
+}
+
+/* Il pulsante di cancellazione nativo di WebKit ha una sua grafica che non
+   segue il tema. Obsidian mobile È WebKit, quindi qui non è un caso di nicchia. */
+.mv-field > .mv-field__input::-webkit-search-cancel-button {
+  appearance: none;
+}
+
+/* Touch: 44pt di bersaglio, e l'icona si sposta con il padding perché è
+   ancorata allo stesso token. `.is-mobile`: vedi la nota in mv-seg.css. */
+.is-mobile .mv-field > .mv-field__input {
+  height: var(--mv-control-h-touch, 44px);
+  /* Il testo sale di un gradino: --font-ui-small è tarato su una distanza di
+     lettura da desktop, e in un campo che si compila col pollice è piccolo. */
+  font-size: var(--font-ui-medium);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mv-field > .mv-field__input {
+    transition-duration: 0.01ms;
+  }
+}
+/* <<< fine blocco vendored <<< */

@@ -10,6 +10,7 @@ import { showDateMenu } from './date-menu.ts';
 import { pickNote } from './note-picker.ts';
 import { QuickAddModal } from './quick-add-modal.ts';
 import { promptText } from './prompt-modal.ts';
+import { createChip, createIconButton, makeButtonLike, setChipPressed } from '../kit/controls.ts';
 import type { RunwayContext } from './context.ts';
 import type {
   DueFilter,
@@ -197,11 +198,11 @@ export class TaskPanel {
     const header = root.createDiv({ cls: 'runway-panel__header' });
     const actions = header.createDiv({ cls: 'runway-panel__actions' });
 
-    const searchWrap = actions.createDiv({ cls: 'runway-search' });
-    const searchIcon = searchWrap.createSpan({ cls: 'runway-search__icon' });
+    const searchWrap = actions.createDiv({ cls: 'mv-field runway-search' });
+    const searchIcon = searchWrap.createSpan({ cls: 'mv-field__icon' });
     setIcon(searchIcon, 'search');
     const search = searchWrap.createEl('input', {
-      cls: 'runway-search__input',
+      cls: 'mv-field__input runway-search__input',
       type: 'search',
       placeholder: 'Search…',
       value: this.state.filter.text,
@@ -220,7 +221,7 @@ export class TaskPanel {
     // there's width; renderFilters fills this persistent host. CSS `order` +
     // flex-wrap pull them up next to search on the full page and drop them to
     // their own line in the compact sidebar (see .runway-segments rules).
-    this.segmentsEl = actions.createDiv({ cls: 'runway-segments' });
+    this.segmentsEl = actions.createDiv({ cls: 'mv-seg runway-segments' });
 
     const add = actions.createEl('button', { cls: 'runway-add-btn' });
     setIcon(add, 'plus');
@@ -228,9 +229,8 @@ export class TaskPanel {
     add.setAttribute('aria-label', 'New task');
     add.addEventListener('click', () => new QuickAddModal(this.ctx).open());
 
-    const overflow = actions.createEl('button', { cls: 'runway-iconbtn' });
+    const overflow = createIconButton(actions, 'More', 'runway-iconbtn');
     setIcon(overflow, 'more-horizontal');
-    overflow.setAttribute('aria-label', 'More');
     overflow.addEventListener('click', (event) => this.openOverflowMenu(event));
 
     this.filtersEl = root.createDiv({ cls: 'runway-panel__filters' });
@@ -250,12 +250,15 @@ export class TaskPanel {
 
     if (this.state.filter.exactDay) {
       const dayRow = bar.createDiv({ cls: 'runway-filterbar__row' });
-      const pill = dayRow.createEl('button', {
-        cls: 'runway-fchip is-active',
-        attr: { 'aria-label': 'Remove day filter' },
-      });
-      pill.createSpan({ cls: 'runway-fchip__label', text: `📅 ${this.state.filter.exactDay}` });
-      const clear = pill.createSpan({ cls: 'runway-fchip__caret' });
+      // Niente emoji nell'etichetta: il calendario è un'icona vera a sinistra,
+      // come in ogni altro chip. Un glifo emoji non prende il colore del tema
+      // e cambia forma fra piattaforme.
+      const pill = dayRow.createDiv({ cls: 'mv-chip is-on runway-fchip' });
+      makeButtonLike(pill, 'Remove day filter');
+      const dayIcon = pill.createSpan({ cls: 'mv-chip__icon' });
+      setIcon(dayIcon, 'calendar');
+      pill.createSpan({ cls: 'mv-chip__label', text: this.state.filter.exactDay });
+      const clear = pill.createSpan({ cls: 'mv-chip__caret' });
       setIcon(clear, 'x');
       pill.addEventListener('click', () =>
         this.update(() => {
@@ -271,9 +274,14 @@ export class TaskPanel {
       segments.empty();
       for (const [value, label] of DUE_SEGMENTS) {
         const active = !this.state.filter.exactDay && this.state.filter.due === value;
+        // <button> è legittimo QUI e solo qui: `.mv-seg > .mv-seg-item` è un
+        // selettore figlio a (0,2,0) e batte `button:not(.clickable-icon)` di
+        // app.css. I primitivi standalone (chip, icon-btn) non hanno questa
+        // leva e vanno su div — vedi kit/controls.ts.
         const segment = segments.createEl('button', {
-          cls: `runway-segment${active ? ' is-active' : ''}`,
+          cls: 'mv-seg-item runway-segment',
           text: label,
+          attr: { 'aria-pressed': String(active) },
         });
         segment.addEventListener('click', () =>
           this.update(() => {
@@ -288,16 +296,16 @@ export class TaskPanel {
     const controlRow = bar.createDiv({ cls: 'runway-filterbar__row' });
 
     const activeFilters = this.activeFilterCount();
-    const filterChip = controlRow.createEl('button', {
-      cls: `runway-fchip${activeFilters > 0 ? ' is-active' : ''}`,
-    });
-    const filterIcon = filterChip.createSpan({ cls: 'runway-fchip__icon' });
+    const filterChip = controlRow.createDiv({ cls: 'mv-chip runway-fchip' });
+    makeButtonLike(filterChip, 'Filters');
+    setChipPressed(filterChip, activeFilters > 0);
+    const filterIcon = filterChip.createSpan({ cls: 'mv-chip__icon' });
     setIcon(filterIcon, 'filter');
     filterChip.createSpan({
-      cls: 'runway-fchip__label',
+      cls: 'mv-chip__label',
       text: activeFilters > 0 ? `Filters (${activeFilters})` : 'Filters',
     });
-    const filterCaret = filterChip.createSpan({ cls: 'runway-fchip__caret' });
+    const filterCaret = filterChip.createSpan({ cls: 'mv-chip__caret' });
     setIcon(filterCaret, 'chevron-down');
     filterChip.addEventListener('click', (event) => this.openFiltersMenu(event));
 
@@ -324,9 +332,8 @@ export class TaskPanel {
     current: T,
     onPick: (value: T) => void,
   ): void {
-    const button = parent.createEl('button', { cls: 'runway-iconbtn' });
+    const button = createIconButton(parent, `${label}: ${shortLabel(options, current)}`, 'runway-iconbtn');
     setIcon(button, icon);
-    button.setAttribute('aria-label', `${label}: ${shortLabel(options, current)}`);
     button.addEventListener('click', (event) => {
       const menu = new Menu();
       for (const [value, optionLabel] of options) {
@@ -792,10 +799,10 @@ export class TaskPanel {
     bar.createSpan({ cls: 'runway-bulkbar__count', text: `${this.selection.size} selected` });
     const actions = bar.createDiv({ cls: 'runway-bulkbar__actions' });
 
-    const complete = actions.createEl('button', { cls: 'runway-pill', text: 'Complete' });
+    const complete = createChip(actions, 'Complete', { extraClass: 'mv-chip--pill runway-pill' });
     complete.addEventListener('click', () => void this.completeTargets());
 
-    const reschedule = actions.createEl('button', { cls: 'runway-pill', text: 'Reschedule' });
+    const reschedule = createChip(actions, 'Reschedule', { extraClass: 'mv-chip--pill runway-pill' });
     reschedule.addEventListener('click', (event) => {
       const targets = this.targets();
       showDateMenu(event, this.ctx.app, undefined, {
@@ -808,7 +815,7 @@ export class TaskPanel {
       });
     });
 
-    const move = actions.createEl('button', { cls: 'runway-pill', text: 'Move' });
+    const move = createChip(actions, 'Move', { extraClass: 'mv-chip--pill runway-pill' });
     move.addEventListener('click', () => {
       const targets = this.targets();
       pickNote(this.ctx.app, 'Move tasks to…', (file) => {
@@ -819,9 +826,8 @@ export class TaskPanel {
       });
     });
 
-    const clear = actions.createEl('button', { cls: 'runway-iconbtn' });
+    const clear = createIconButton(actions, 'Deselect', 'runway-iconbtn');
     setIcon(clear, 'x');
-    clear.setAttribute('aria-label', 'Deselect');
     clear.addEventListener('click', () => this.clearSelection());
   }
 

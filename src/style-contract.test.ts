@@ -23,8 +23,8 @@ import test from 'node:test';
  *    `var(--token, <fallback>)` literal fallback, or as the `0.01ms`
  *    reduced-motion reset (an a11y escape hatch, not a design value) — never
  *    a bare, untethered value.
- * 4. !important declarations are capped at 10, the exact post-mv-kit-audit
- *    count — the ceiling can only ratchet down.
+ * 4. !important declarations are capped at 3 (era 10 prima della migrazione
+ *    ai primitivi mv-*) — il soffitto può solo scendere.
  */
 
 const css = readFileSync(new URL('../styles.css', import.meta.url), 'utf8');
@@ -67,10 +67,13 @@ test('raw ms/hex/cubic-bezier values appear only as var() fallbacks', () => {
   // `var(--token, <fallback>)` expression (any token, native Obsidian ones
   // included — the contract's requirement is "never a bare value", not
   // "only --cosmos-*/--mv-* tokens may have fallbacks"), or when it is the
-  // universal `0.01ms` reduced-motion reset (the sole such site in
-  // styles.css, and it always carries `!important` to win against every
-  // component's own transition shorthand — that isn't a design value, it's
-  // an a11y escape hatch).
+  // universal `0.01ms` reduced-motion reset — non è un valore di design, è
+  // una via di fuga di accessibilità.
+  // Il reset compare in due forme, entrambe legittime: con `!important` nel
+  // blocco globale di Runway, che deve battere lo shorthand `transition` di
+  // ogni componente; senza, dentro i primitivi del kit, dove la regola ha lo
+  // stesso selettore di quella base e vince per ordine di sorgente (il kit
+  // vieta `!important` proprio perché non gli serve mai).
   const rawMsPattern = /\b\d+(?:\.\d+)?ms\b/g;
   const rawHexPattern = /#[0-9a-fA-F]{3,8}\b/g;
   const rawCubicBezierPattern = /cubic-bezier\([^)]*\)/g;
@@ -79,7 +82,7 @@ test('raw ms/hex/cubic-bezier values appear only as var() fallbacks', () => {
 
   lines.forEach((line, idx) => {
     const trimmed = line.trim();
-    const isReducedMotionReset = /^transition-duration:\s*0\.01ms\s*!important;$/.test(trimmed);
+    const isReducedMotionReset = /^transition-duration:\s*0\.01ms\s*(?:!important\s*)?;$/.test(trimmed);
     if (isReducedMotionReset) return;
 
     const hasVarFallback = /var\(\s*--[\w-]+\s*,/.test(line);
@@ -100,17 +103,18 @@ test('raw ms/hex/cubic-bezier values appear only as var() fallbacks', () => {
 
 test('caps !important declarations at the post-mv-kit-audit count (ratchet down only)', () => {
   const importantCount = (css.match(/!important;/g) ?? []).length;
-  // Ceiling set exactly at the post-fix count landed by the mv-kit audit
-  // (wave 7, 2026-07): the focus-ring kill on .runway-panel buttons and the
-  // search input (4), the search input's native input[type='search']
-  // chrome overrides (5), and the reduced-motion transition-duration reset
-  // (1). Every occurrence is documented in
-  // docs/2026-07-mv-kit-audit.md's `!important` audit table. This ceiling
-  // may only be LOWERED, never raised: any future edit that adds an
-  // !important without removing one elsewhere fails this test.
+  // Soffitto 10 → 3 (2026-08-04, migrazione ai primitivi mv-*). Il campo di
+  // ricerca è passato a `.mv-field`, il cui selettore figlio (0,2,0) batte
+  // `input[type='search']` di app.css (0,1,1) per peso proprio: i CINQUE
+  // !important che servivano solo a quello sono spariti. Restano: la
+  // soppressione dell'anello di fuoco da puntatore (2, che devono essere
+  // !important perché app.css lo dichiara tale) e il reset di
+  // prefers-reduced-motion (1).
+  // Il soffitto può solo SCENDERE: un edit che aggiunge un !important senza
+  // toglierne un altro fa fallire questo test.
   assert.ok(
-    importantCount <= 10,
-    `!important count ${importantCount} exceeds the frozen ceiling of 10`,
+    importantCount <= 3,
+    `!important count ${importantCount} exceeds the frozen ceiling of 3`,
   );
 });
 

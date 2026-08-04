@@ -7,6 +7,7 @@ import { parseNaturalDate } from '../core/natural-date.ts';
 import { pickNote } from './note-picker.ts';
 import type { RunwayContext } from './context.ts';
 import type { DayKey, Priority } from '../types.ts';
+import { createChip, setChipPressed } from '../kit/controls.ts';
 
 /** Quick-add: text + date chips + priority + target note (default: today's daily). */
 export class QuickAddModal extends Modal {
@@ -47,16 +48,16 @@ export class QuickAddModal extends Modal {
     ];
     const chipEls: HTMLElement[] = [];
     for (const [label, date] of dateChoices) {
-      const chip = chips.createEl('button', { cls: 'runway-quick-add__chip', text: label });
-      if (date === this.date) chip.addClass('is-active');
+      const chip = createChip(chips, label, {
+        pressed: date === this.date,
+        extraClass: 'mv-chip--pill runway-quick-add__chip',
+      });
       chip.addEventListener('click', () => {
         this.date = date;
-        for (const el of chipEls) el.removeClass('is-active');
-        chip.addClass('is-active');
+        for (const el of chipEls) setChipPressed(el, el === chip);
       });
       chipEls.push(chip);
     }
-    chipEls[0]?.addClass('is-active');
 
     const priorityRow = this.contentEl.createDiv({ cls: 'runway-quick-add__priority' });
     const select = priorityRow.createEl('select', { cls: 'dropdown' });
