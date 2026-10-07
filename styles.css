@@ -424,7 +424,7 @@
   position: relative;
   width: 13px;
   height: 13px;
-  border-radius: 3px;
+  border-radius: var(--checkbox-radius, 3px);
   border: 1.5px solid var(--runway-check-color);
   transition: background-color var(--runway-t), border-color var(--runway-t);
 }
