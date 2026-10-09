@@ -262,7 +262,7 @@ export class TaskEditService {
     newDate: DayKey,
     oldDate: DayKey | undefined,
   ): void {
-    const fragment = document.createDocumentFragment();
+    const fragment = createFragment();
     fragment.createSpan({ text: `Runway: task moved to ${newDate}. ` });
     if (oldDate === undefined) {
       new Notice(fragment, 10_000);

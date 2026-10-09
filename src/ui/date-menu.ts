@@ -73,7 +73,7 @@ export function buildDateMenuItems(
       .setTitle('Choose date…')
       .setIcon('calendar-search')
       .onClick(() => {
-        new PickDateModal(app, current ?? today, handlers.onPick).open();
+        new PickDateModal(app, current ?? today, (date) => handlers.onPick(date)).open();
       }),
   );
   if (handlers.onClear && current !== undefined) {
