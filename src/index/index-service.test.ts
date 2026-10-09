@@ -19,7 +19,7 @@ function deferred<T>(): Deferred<T> {
 
 function harness(read: () => Promise<string>): {
   service: TaskIndexService;
-  stop(): void;
+  stop: () => void;
 } {
   const file = {
     path: 'Tasks.md',

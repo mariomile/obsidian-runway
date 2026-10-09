@@ -96,12 +96,13 @@ function shortLabel(options: readonly [string, string][], value: string): string
   return options.find(([candidate]) => candidate === value)?.[1] ?? value;
 }
 
-export interface TaskPanelState {
+// A type alias (not an interface) so it is assignable to the view's Record<string, unknown> state.
+export type TaskPanelState = {
   filter: TaskFilter;
   sort: TaskSort;
   group: TaskGroup;
   collapsed: string[];
-}
+};
 
 export interface TaskPanelOptions {
   compact: boolean;
@@ -133,7 +134,7 @@ export class TaskPanel {
   private resultsEl: HTMLElement | null = null;
   private countEl: HTMLElement | null = null;
   private unsubscribe: (() => void) | null = null;
-  private searchTimer: ReturnType<typeof setTimeout> | null = null;
+  private searchTimer: number | null = null;
   private lastGroupKeys: string[] = [];
 
   // Keyboard cursor + multi-selection over the currently-visible rows.
@@ -176,7 +177,7 @@ export class TaskPanel {
   }
 
   unmount(): void {
-    if (this.searchTimer !== null) clearTimeout(this.searchTimer);
+    if (this.searchTimer !== null) window.clearTimeout(this.searchTimer);
     if (this.keyHandler) this.container.removeEventListener('keydown', this.keyHandler);
     this.keyHandler = null;
     this.unsubscribe?.();
@@ -208,8 +209,8 @@ export class TaskPanel {
       value: this.state.filter.text,
     });
     search.addEventListener('input', () => {
-      if (this.searchTimer !== null) clearTimeout(this.searchTimer);
-      this.searchTimer = setTimeout(() => {
+      if (this.searchTimer !== null) window.clearTimeout(this.searchTimer);
+      this.searchTimer = window.setTimeout(() => {
         this.state.filter.text = search.value;
         this.expanded.clear();
         this.renderResults();

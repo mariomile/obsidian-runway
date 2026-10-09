@@ -43,7 +43,7 @@ export class TaskIndexService {
   private readonly app: App;
   private isExcluded: (path: string) => boolean;
   readonly core = new TaskIndexCore();
-  private timer: ReturnType<typeof setTimeout> | null = null;
+  private timer: number | null = null;
   private ready = false;
   private scanGeneration = 0;
   private stopped = true;
@@ -100,7 +100,7 @@ export class TaskIndexService {
       this.stopped = true;
       this.scanGeneration += 1;
       this.ready = false;
-      if (this.timer !== null) clearTimeout(this.timer);
+      if (this.timer !== null) window.clearTimeout(this.timer);
     });
     this.app.workspace.onLayoutReady(() => {
       if (!this.stopped) void this.initialScan();
@@ -156,8 +156,8 @@ export class TaskIndexService {
   }
 
   private queueNotify(): void {
-    if (this.timer !== null) clearTimeout(this.timer);
-    this.timer = setTimeout(() => {
+    if (this.timer !== null) window.clearTimeout(this.timer);
+    this.timer = window.setTimeout(() => {
       this.timer = null;
       this.core.notify();
     }, EMIT_DEBOUNCE_MS);

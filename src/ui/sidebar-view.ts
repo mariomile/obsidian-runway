@@ -36,12 +36,12 @@ export class RunwaySidebarView extends ItemView {
   }
 
   getState(): Record<string, unknown> {
-    return (this.panel ? this.panel.getState() : this.pending) as Record<string, unknown>;
+    return this.panel ? this.panel.getState() : this.pending;
   }
 
   async setState(state: unknown, result: ViewStateResult): Promise<void> {
     if (typeof state === 'object' && state !== null) {
-      this.pending = state as Partial<TaskPanelState>;
+      this.pending = state;
       if (this.panel) this.mountPanel();
     }
     await super.setState(state, result);
