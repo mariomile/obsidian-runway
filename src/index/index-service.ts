@@ -1,5 +1,6 @@
 import type { App, CachedMetadata, Plugin, TAbstractFile, TFile } from 'obsidian';
 
+import { newlyCompleted } from '../core/completion.ts';
 import { parseTaskLine } from '../core/parse.ts';
 import { isChildNote, noteTextOf } from '../core/task-note.ts';
 import { topLevelFolder } from '../utils.ts';
@@ -47,6 +48,7 @@ export class TaskIndexService {
   private ready = false;
   private scanGeneration = 0;
   private stopped = true;
+  private readonly completedListeners = new Set<(tasks: Task[]) => void>();
 
   constructor(app: App, isExcluded: (path: string) => boolean) {
     this.app = app;
@@ -65,13 +67,24 @@ export class TaskIndexService {
     return this.core.subscribe(listener);
   }
 
+  /** Tasks ticked done outside Runway (no ✅ written), reported per file edit. */
+  onCompleted(listener: (tasks: Task[]) => void): () => void {
+    this.completedListeners.add(listener);
+    return () => this.completedListeners.delete(listener);
+  }
+
   start(plugin: Plugin): void {
     this.stopped = false;
     plugin.registerEvent(
       this.app.metadataCache.on('changed', (file, data, cache) => {
         if (this.isExcluded(file.path)) return;
-        this.core.setFile(file.path, extractTasks(file.path, data, cache));
+        const before = this.core.fileTasks(file.path);
+        const after = extractTasks(file.path, data, cache);
+        this.core.setFile(file.path, after);
         this.queueNotify();
+        if (!this.ready) return;
+        const completed = newlyCompleted(before, after);
+        if (completed.length > 0) for (const listener of this.completedListeners) listener(completed);
       }),
     );
     plugin.registerEvent(

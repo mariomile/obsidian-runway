@@ -68,6 +68,18 @@ export class TaskEditService {
     return this.editLine(ref, (line) => transitionStatus(line, target, todayKey()));
   }
 
+  /**
+   * Write today's ✅ on a task ticked done in the editor, which leaves only
+   * `[x]`. Silent: the user did the completing, this only records when.
+   * Recurring tasks are skipped — completing those needs the next occurrence.
+   */
+  async stampDone(ref: TaskRef): Promise<boolean> {
+    if (ref.rawText.includes('🔁')) return false;
+    return this.editLine(ref, (line) => transitionStatus(line, 'done', todayKey()), {
+      silent: true,
+    });
+  }
+
   /** Rewrite one date field; success Notice carries a 10s undo. */
   async reschedule(
     ref: TaskRef,

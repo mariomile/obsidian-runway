@@ -1,7 +1,7 @@
 import { setIcon } from 'obsidian';
 
 import { compareDayKeys, todayKey } from '../dates.ts';
-import { PRIORITY_EMOJI } from '../core/parse.ts';
+import { PRIORITY_ICON, PRIORITY_LABEL } from './priority.ts';
 import { promptTaskNote, refOf, showTaskMenu } from './task-menu.ts';
 import { showDateMenu } from './date-menu.ts';
 import type { RunwayContext } from './context.ts';
@@ -101,11 +101,11 @@ export function renderTaskRow(
 
   const meta = main.createDiv({ cls: 'runway-row__meta' });
   if (task.priority !== null) {
-    meta.createSpan({
-      cls: `runway-chip runway-chip--priority`,
-      text: PRIORITY_EMOJI[task.priority],
-      attr: { 'aria-label': `Priority: ${task.priority}` },
+    const chip = meta.createSpan({
+      cls: `runway-chip runway-chip--priority runway-chip--priority-${task.priority}`,
+      attr: { 'aria-label': `Priority: ${PRIORITY_LABEL[task.priority]}` },
     });
+    setIcon(chip, PRIORITY_ICON[task.priority]);
   }
   if (task.due !== undefined) {
     renderDateChip(meta, ctx, task, '📅', task.due, 'due');

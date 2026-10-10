@@ -38,6 +38,11 @@ export class TaskIndexCore {
     this.snapshot = null;
   }
 
+  /** Tasks currently indexed for one file (empty when none). */
+  fileTasks(path: string): readonly Task[] {
+    return this.byPath.get(path) ?? [];
+  }
+
   all(): Task[] {
     if (this.snapshot === null) {
       this.snapshot = [...this.byPath.values()].flat();

@@ -4,7 +4,7 @@ import type { MenuItem } from 'obsidian';
 import { todayKey } from '../dates.ts';
 import { DEFAULT_FILTER, isUntriaged, queryTasks } from '../core/query.ts';
 import { onBoard } from '../core/board.ts';
-import { PRIORITY_EMOJI } from '../core/parse.ts';
+import { PRIORITIES, PRIORITY_ICON, PRIORITY_LABEL } from './priority.ts';
 import { renderTaskRow } from './task-row.ts';
 import { PRIORITY_ITEMS, promptTaskNote, refOf } from './task-menu.ts';
 import { renderBoard } from './kanban.ts';
@@ -105,13 +105,13 @@ const PRIORITY_KEYS: Record<string, Priority | null> = {
 /** Agenda's far buckets open collapsed — the near days are what you glance at. */
 const AGENDA_FAR_KEYS = ['y-later', 'zz-none'];
 
-const PRIORITY_OPTIONS: [string, string][] = [
-  ['', 'Priority'],
-  ['highest', `${PRIORITY_EMOJI.highest} Highest`],
-  ['high', `${PRIORITY_EMOJI.high} High`],
-  ['medium', `${PRIORITY_EMOJI.medium} Medium`],
-  ['low', `${PRIORITY_EMOJI.low} Low`],
-  ['lowest', `${PRIORITY_EMOJI.lowest} Lowest`],
+const PRIORITY_OPTIONS: [string, string, string | null][] = [
+  ['', 'Any priority', null],
+  ...PRIORITIES.map((priority): [string, string, string] => [
+    priority,
+    PRIORITY_LABEL[priority],
+    PRIORITY_ICON[priority],
+  ]),
 ];
 
 function shortLabel(options: readonly [string, string][], value: string): string {
@@ -479,10 +479,11 @@ export class TaskPanel {
       const current = this.state.filter.priorities?.[0] ?? '';
       item.setTitle('Priority').setIcon('flag');
       const sub = submenuOf(item);
-      for (const [value, label] of PRIORITY_OPTIONS) {
+      for (const [value, label, icon] of PRIORITY_OPTIONS) {
         sub.addItem((sitem: MenuItem) =>
           sitem
             .setTitle(label)
+            .setIcon(icon)
             .setChecked(value === current)
             .onClick(() =>
               this.update(() => {
@@ -814,9 +815,14 @@ export class TaskPanel {
 
   private pickPriority(event: MouseEvent, tasks: Task[]): void {
     const menu = new Menu();
-    for (const [priority, label] of PRIORITY_ITEMS) {
+    for (const [priority, label, icon] of PRIORITY_ITEMS) {
       if (priority === null) continue;
-      menu.addItem((item) => item.setTitle(label).onClick(() => void this.prioritizeTargets(tasks, priority)));
+      menu.addItem((item) =>
+        item
+          .setTitle(label)
+          .setIcon(icon)
+          .onClick(() => void this.prioritizeTargets(tasks, priority)),
+      );
     }
     menu.showAtMouseEvent(event);
   }

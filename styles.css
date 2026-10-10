@@ -711,7 +711,28 @@
 }
 
 .runway-chip--priority {
-  font-size: 0.8em;
+  display: inline-flex;
+  align-items: center;
+  color: var(--text-muted);
+}
+
+.runway-chip--priority svg {
+  width: 13px;
+  height: 13px;
+}
+
+/* Linear's ramp: urgent reads red, high orange, the rest stay quiet. */
+.runway-chip--priority-highest {
+  color: var(--color-red);
+}
+
+.runway-chip--priority-high {
+  color: var(--color-orange);
+}
+
+.runway-chip--priority-low,
+.runway-chip--priority-lowest {
+  color: var(--text-faint);
 }
 
 .runway-chip--note {
