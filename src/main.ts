@@ -66,6 +66,21 @@ export default class RunwayPlugin extends Plugin {
         }),
     });
     this.addCommand({
+      id: 'open-triage',
+      name: 'Triage (new tasks waiting for a decision)',
+      callback: () =>
+        void this.openListView({
+          filter: { ...structuredClone(DEFAULT_FILTER), triage: true },
+          group: 'note',
+          layout: 'list',
+        }),
+    });
+    this.addCommand({
+      id: 'open-board',
+      name: 'Board (by status)',
+      callback: () => void this.openListView({ layout: 'board' }),
+    });
+    this.addCommand({
       id: 'open-upcoming',
       name: 'Upcoming (day-by-day agenda)',
       callback: () =>

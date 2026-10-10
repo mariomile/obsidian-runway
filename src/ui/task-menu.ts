@@ -58,7 +58,7 @@ const STATUS_ITEMS: [Exclude<TaskStatus, 'unknown'>, string, string][] = [
   ['cancelled', 'Cancelled', 'x-circle'],
 ];
 
-const PRIORITY_ITEMS: [Priority | null, string][] = [
+export const PRIORITY_ITEMS: [Priority | null, string][] = [
   ['highest', `${PRIORITY_EMOJI.highest} Highest`],
   ['high', `${PRIORITY_EMOJI.high} High`],
   ['medium', `${PRIORITY_EMOJI.medium} Medium`],
