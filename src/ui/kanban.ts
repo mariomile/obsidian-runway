@@ -14,6 +14,9 @@ export interface BoardOptions {
   ctx: RunwayContext;
   /** Wire cursor/selection onto each card, same as list rows. */
   onCard: (task: Task, card: HTMLElement) => void;
+  /** Max cards rendered in a column. */
+  limit: (columnKey: string) => number;
+  onShowMore: (columnKey: string) => void;
 }
 
 function parseRef(payload: string): TaskRef | null {
@@ -60,7 +63,8 @@ export function renderBoard(parent: HTMLElement, groups: TaskGroupResult[], opts
       if (ref && status) void opts.ctx.edits.setStatus(ref, status);
     });
 
-    for (const task of tasks) {
+    const shown = tasks.slice(0, opts.limit(column.key));
+    for (const task of shown) {
       const card = renderTaskRow(body, opts.ctx, task, { showNote: true });
       card.addClass('runway-board__card');
       card.setAttr('draggable', 'true');
@@ -70,6 +74,13 @@ export function renderBoard(parent: HTMLElement, groups: TaskGroupResult[], opts
       });
       card.addEventListener('dragend', () => card.removeClass('is-dragging'));
       opts.onCard(task, card);
+    }
+    if (tasks.length > shown.length) {
+      const more = body.createEl('button', {
+        cls: 'runway-group__more',
+        text: `Show ${tasks.length - shown.length} more`,
+      });
+      more.addEventListener('click', () => opts.onShowMore(column.key));
     }
 
     if (column.status === 'todo') {
