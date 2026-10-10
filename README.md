@@ -13,12 +13,17 @@ Both offer: a compact filter bar (text search + status pills + menu-chips for du
 
 - **Agenda grouping** — a day-by-day timeline: one bucket per calendar day from today to a configurable horizon (default 14 days, **Settings → Orizzonte Agenda**), with everything past-due folded into a single **Overdue** bucket up top and anything beyond the horizon into **Later**. Empty days never render a bucket, so the list stays tight. Each day header carries the weekday (or **Today** / **Tomorrow**) plus a faint date; the Overdue bucket reads red and Today is marked with a due-dot. Far buckets (Later / No date) open collapsed.
 
+- **Triage** — the first time segment. New open to-dos that landed in an inbox folder (daily notes, `_inbox`) with no date and no priority wait here, with a count. Each decision is a plain edit to the task line, so the queue keeps no state of its own: **accept** sets a priority, **snooze** schedules it (⏳), **move** files it into a project note, **decline** cancels it. Rows carry the four actions inline, so triage works on a phone too.
+- **Project grouping** — set **Settings → Projects folder** (one subfolder per project). Tasks inside a project folder, or linking to a project note, group under that project, with the `status` from the project note's frontmatter next to the name. Everything else lands in **No project**.
+- **Board** — the layout button next to the segments switches the list to a status board: **To do · In progress · Done** (`[ ]` / `[/]` / `[x]`). Drag a card between columns to change its status. Done keeps only the last 7 days. The segments and filters still apply; in a narrow pane the columns stack.
+
 ## Interactions & keyboard
 
 Cursor navigation and multi-selection:
 
 - `j` / `k` move a cursor · `x` complete · `e` edit · `enter` / `o` open · `space` toggle selection · `esc` clear.
-- Multi-select via `space` or modifier/shift-click; a bulk bar offers **Complete / Reschedule / Move** on the whole selection.
+- `1`–`4` set priority (highest → low), `0` clears it · `s` snooze to a date · `m` move to a project note · `d` decline (cancel). In Triage, `1`–`4` is how you accept.
+- Multi-select via `space` or modifier/shift-click; a bulk bar offers **Complete / Reschedule / Move / Decline** on the whole selection.
 
 ## Task syntax
 
@@ -50,7 +55,7 @@ Everything writes back to the source note through a guarded line edit — the wr
 ## Status bar & commands
 
 - Status bar shows an **overdue counter**; click it to open the list filtered to overdue.
-- Commands: open list, open sidebar, quick-add, **Oggi** (overdue + due-today), and **Prossimi** (opens the list in the day-by-day Agenda grouping).
+- Commands: open list, open sidebar, quick-add, **Oggi** (overdue + due-today), **Prossimi** (opens the list in the day-by-day Agenda grouping), **Triage** and **Board (by status)**.
 - **Agent / plugin API** at `app.plugins.plugins.runway.api`: `allTasks`, `query`, `overdue`, `today`, `createTask`, `completeTask`, `reschedule`, `setPriority`, `moveToNote`, `openForDay`. Sibling plugins (Horizon's "open the active day in Runway") and Exo drive tasks through it.
 
 ## Scope

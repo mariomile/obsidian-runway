@@ -2,7 +2,14 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
 import { parseTaskLine } from './parse.ts';
-import { DEFAULT_FILTER, matchesTask, queryTasks, sortTasks } from './query.ts';
+import {
+  DEFAULT_FILTER,
+  isUntriaged,
+  matchesTask,
+  projectOf,
+  queryTasks,
+  sortTasks,
+} from './query.ts';
 import { topLevelFolder } from '../utils.ts';
 import type { Task, TaskFilter } from '../types.ts';
 
@@ -208,4 +215,82 @@ test('group none returns a single bucket with everything matched', () => {
   const groups = queryTasks(TASKS, DEFAULT_FILTER, 'due', 'none', TODAY);
   assert.equal(groups.length, 1);
   assert.equal(groups[0]?.tasks.length, 6);
+});
+
+// ── Triage, project and status grouping ─────────────────────────────────
+
+const INBOX = ['Journal/Daily', '_inbox'];
+
+test('isUntriaged: open, undated, unprioritized, in an inbox source', () => {
+  const daily = 'Journal/Daily/10-10-2026.md';
+  assert.ok(isUntriaged(makeTask('- [ ] Call Luca', daily), INBOX));
+  assert.ok(!isUntriaged(makeTask('- [ ] Call Luca ⏫', daily), INBOX), 'priority = accepted');
+  assert.ok(!isUntriaged(makeTask('- [ ] Call Luca ⏳ 2026-10-12', daily), INBOX), 'date = snoozed');
+  assert.ok(!isUntriaged(makeTask('- [-] Call Luca', daily), INBOX), 'cancelled = declined');
+  assert.ok(!isUntriaged(makeTask('- [/] Call Luca', daily), INBOX), 'in progress = already picked up');
+  assert.ok(
+    !isUntriaged(makeTask('- [ ] Call Luca', 'Active/Projects/Kore/Kore.md'), INBOX),
+    'filed in a project',
+  );
+});
+
+test('triage filter ignores the due preset and keeps only untriaged tasks', () => {
+  const tasks = [
+    makeTask('- [ ] Fresh', 'Journal/Daily/10-10-2026.md', 1),
+    makeTask('- [ ] Scheduled 📅 2026-10-10', 'Journal/Daily/10-10-2026.md', 2),
+    makeTask('- [ ] Elsewhere', 'Input/Articles/a.md', 3),
+  ];
+  const groups = queryTasks(tasks, filter({ triage: true, due: 'today' }), 'due', 'none', TODAY, {
+    inboxFolders: INBOX,
+  });
+  assert.deepEqual(
+    groups.flatMap((group) => group.tasks.map((task) => task.description)),
+    ['Fresh'],
+  );
+});
+
+test('projectOf: folder first, then a link to a known project', () => {
+  const options = {
+    projectsFolder: 'Active/Projects/',
+    projects: new Map<string, string | undefined>([['Kore', 'active'], ['DeepAgent', 'active']]),
+  };
+  assert.equal(projectOf(makeTask('- [ ] A', 'Active/Projects/Kore/Kore.md'), options), 'Kore');
+  assert.equal(projectOf(makeTask('- [ ] B', 'Active/Projects/Kore/specs/x.md'), options), 'Kore');
+  assert.equal(projectOf(makeTask('- [ ] C', 'Active/Projects/Loose.md'), options), 'Loose');
+  assert.equal(
+    projectOf(makeTask('- [ ] D for [[Active/Projects/DeepAgent/DeepAgent#Next|DA]]', 'Journal/Daily/x.md'), options),
+    'DeepAgent',
+  );
+  assert.equal(projectOf(makeTask('- [ ] E about [[Someone]]', 'Journal/Daily/x.md'), options), null);
+  assert.equal(projectOf(makeTask('- [ ] F', 'Active/Projects/Kore/Kore.md'), {}), null);
+});
+
+test('project grouping: one bucket per project with its status, No project last', () => {
+  const tasks = [
+    makeTask('- [ ] Loose task', 'Journal/Daily/x.md', 1),
+    makeTask('- [ ] Kore task', 'Active/Projects/Kore/Kore.md', 2),
+    makeTask('- [ ] Linked [[Buildrs]]', 'Journal/Daily/x.md', 3),
+  ];
+  const groups = queryTasks(tasks, DEFAULT_FILTER, 'due', 'project', TODAY, {
+    projectsFolder: 'Active/Projects',
+    projects: new Map([['Kore', 'active'], ['Buildrs', 'paused']]),
+  });
+  assert.deepEqual(
+    groups.map((group) => [group.label, group.sublabel, group.tasks.length]),
+    [
+      ['Buildrs', 'paused', 1],
+      ['Kore', 'active', 1],
+      ['No project', undefined, 1],
+    ],
+  );
+});
+
+test('status grouping orders To do, In progress, Done', () => {
+  const tasks = [
+    makeTask('- [x] Shipped ✅ 2026-07-03', 'a.md', 1),
+    makeTask('- [/] Doing', 'a.md', 2),
+    makeTask('- [ ] Next', 'a.md', 3),
+  ];
+  const groups = queryTasks(tasks, filter({ statuses: [] }), 'due', 'status', TODAY);
+  assert.deepEqual(groups.map((group) => group.label), ['To do', 'In progress', 'Done']);
 });

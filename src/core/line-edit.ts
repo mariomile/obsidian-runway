@@ -47,3 +47,27 @@ export function removeLine(
   lines.splice(index, 1);
   return { content: lines.join('\n'), removed: true };
 }
+
+/**
+ * Remove a task together with the optional child note captured before a
+ * cross-file move. The child is part of the optimistic-concurrency guard: if
+ * it appeared, disappeared, or changed while the target write was in flight,
+ * leave the source untouched so the move can only duplicate, never lose data.
+ */
+export function removeTaskBlock(
+  content: string,
+  ref: LineRef,
+  expectedChild: string | undefined,
+  isChild: (taskLine: string, candidate: string | undefined) => boolean,
+): { content: string; removed: boolean } {
+  const lines = content.split('\n');
+  const index = locateLine(lines, ref);
+  if (index === -1) return { content, removed: false };
+  const taskLine = lines[index];
+  if (taskLine === undefined) return { content, removed: false };
+  const candidate = lines[index + 1];
+  const currentChild = isChild(taskLine, candidate) ? candidate : undefined;
+  if (currentChild !== expectedChild) return { content, removed: false };
+  lines.splice(index, expectedChild === undefined ? 1 : 2);
+  return { content: lines.join('\n'), removed: true };
+}

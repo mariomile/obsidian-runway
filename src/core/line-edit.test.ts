@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { applyLineEdit } from './line-edit.ts';
+import { applyLineEdit, removeTaskBlock } from './line-edit.ts';
+import { isChildNote } from './task-note.ts';
 
 const CONTENT = ['# Note', '', '- [ ] Task uno', '- [ ] Task due', '- [ ] Task uno'].join('\n');
 
@@ -30,4 +31,20 @@ test('aborts when the line no longer exists', () => {
 test('no-op transform reports unchanged', () => {
   const result = applyLineEdit(CONTENT, { line: 3, rawText: '- [ ] Task due' }, (line) => line);
   assert.ok(!result.changed);
+});
+
+test('removeTaskBlock removes the captured child note with the task', () => {
+  const content = '- [ ] Task\n\t- private note\nNext';
+  assert.deepEqual(
+    removeTaskBlock(content, { line: 0, rawText: '- [ ] Task' }, '\t- private note', isChildNote),
+    { content: 'Next', removed: true },
+  );
+});
+
+test('removeTaskBlock refuses removal when the child note changed', () => {
+  const content = '- [ ] Task\n\t- edited note\nNext';
+  assert.deepEqual(
+    removeTaskBlock(content, { line: 0, rawText: '- [ ] Task' }, '\t- old note', isChildNote),
+    { content, removed: false },
+  );
 });

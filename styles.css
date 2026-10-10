@@ -780,10 +780,141 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* ── Triage ──────────────────────────────────────────────────────────── */
+
+/* Waiting count inside the Triage segment: tabular, quieter than the label. */
+.runway-segment__count {
+  margin-left: var(--size-2-2);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-faint);
+}
+
+.runway-triage-hint {
+  color: var(--text-faint);
+  font-size: var(--font-ui-smaller);
+  padding: 0 var(--size-2-2) var(--size-2-2);
+}
+
+/* Accept · Snooze · Move · Decline sit where the row's actions live: visible
+   on hover (desktop) and always on touch, like the ⋯ button next to them. */
+.runway-row__triage {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--size-2-1);
+  opacity: 0;
+  transition: opacity var(--runway-t);
+}
+
+@media (hover: hover) {
+  .runway-row:hover .runway-row__triage,
+  .runway-row.is-cursor .runway-row__triage {
+    opacity: 1;
+  }
+}
+
+/* ── Board ───────────────────────────────────────────────────────────── */
+
+.runway-board {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(220px, 1fr));
+  gap: var(--size-4-3);
+  align-items: start;
+  overflow-x: auto;
+}
+
+.runway-board__col {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  border-radius: var(--radius-m);
+  background-color: var(--background-secondary);
+  transition: box-shadow var(--runway-t);
+}
+
+.runway-board__col.is-dragover {
+  box-shadow: inset 0 0 0 1px var(--interactive-accent);
+}
+
+.runway-board__colhead {
+  display: flex;
+  align-items: center;
+  gap: var(--size-2-2);
+  padding: var(--size-2-3) var(--size-4-2);
+  font-size: var(--font-ui-small);
+  font-weight: var(--font-medium);
+  color: var(--text-muted);
+}
+
+.runway-board__count {
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-faint);
+}
+
+.runway-board__colbody {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-2-1);
+  min-height: 64px;
+  padding: 0 var(--size-2-2) var(--size-2-2);
+}
+
+.runway-board__card {
+  background-color: var(--background-primary);
+  box-shadow: 0 0 0 1px var(--background-modifier-border);
+  cursor: grab;
+}
+
+.runway-board__card.is-dragging {
+  opacity: 0.5;
+}
+
+.runway-board__coladd {
+  display: flex;
+  align-items: center;
+  gap: var(--size-2-1);
+  margin: 0 var(--size-2-2) var(--size-2-2);
+  padding: var(--size-2-1) var(--size-2-2);
+  border-radius: var(--radius-s);
+  color: var(--text-faint);
+  font-size: var(--font-ui-small);
+  cursor: var(--cursor);
+}
+
+.runway-board__coladd-icon {
+  display: flex;
+}
+
+.runway-board__coladd-icon svg {
+  width: var(--icon-xs);
+  height: var(--icon-xs);
+}
+
+@media (hover: hover) {
+  .runway-board__coladd:hover {
+    color: var(--text-normal);
+    background-color: var(--background-modifier-hover);
+  }
+}
+
+/* Too narrow for three columns side by side (sidebar, split pane, phone):
+   stack them, To do on top. Measured on the results box, not the window. */
+.runway-panel__results:has(> .runway-board) {
+  container-type: inline-size;
+}
+
+@container (max-width: 680px) {
+  .runway-board {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* ── Touch / mobile ──────────────────────────────────────────────────── */
 
 /* No hover on touch: reveal row/group actions and give them tap targets. */
 .is-mobile .runway-row__more,
+.is-mobile .runway-row__triage,
 .is-mobile .runway-group__act {
   opacity: 1;
 }

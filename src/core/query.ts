@@ -63,9 +63,16 @@ function matchesTag(taskTags: string[], wanted: string): boolean {
   return taskTags.some((tag) => tag === wanted || tag.startsWith(`${wanted}/`));
 }
 
-export function matchesTask(task: Task, filter: TaskFilter, today: DayKey): boolean {
+export function matchesTask(
+  task: Task,
+  filter: TaskFilter,
+  today: DayKey,
+  options: QueryOptions = {},
+): boolean {
   if (filter.statuses.length > 0 && !filter.statuses.includes(task.status)) return false;
-  if (filter.exactDay) {
+  if (filter.triage) {
+    if (!isUntriaged(task, options.inboxFolders ?? [])) return false;
+  } else if (filter.exactDay) {
     if (taskDate(task) !== filter.exactDay) return false;
   }
   if (filter.tags.length > 0 && !filter.tags.some((tag) => matchesTag(task.tags, tag))) {
@@ -75,7 +82,7 @@ export function matchesTask(task: Task, filter: TaskFilter, today: DayKey): bool
     const prefix = filter.folder.endsWith('/') ? filter.folder : `${filter.folder}/`;
     if (!task.path.startsWith(prefix)) return false;
   }
-  if (!filter.exactDay && !matchesDue(task, filter.due, today)) return false;
+  if (!filter.triage && !filter.exactDay && !matchesDue(task, filter.due, today)) return false;
   if (
     filter.priorities !== null &&
     (task.priority === null || !filter.priorities.includes(task.priority))
@@ -132,6 +139,10 @@ export const DEFAULT_AGENDA_HORIZON = 14;
 export interface QueryOptions {
   /** Folder prefixes whose tasks land in the pinned Inbox bucket of the note grouping. */
   inboxFolders?: string[];
+  /** Folder holding one subfolder per project ('' or absent = no projects). */
+  projectsFolder?: string;
+  /** Known projects by name, with the status read from each project note. */
+  projects?: ReadonlyMap<string, string | undefined>;
   /** Days ahead the Agenda grouping keeps per-day before folding into "Later". */
   agendaHorizonDays?: number;
 }
@@ -153,6 +164,64 @@ function parentFolder(path: string): string {
   const slash = path.lastIndexOf('/');
   return slash === -1 ? '' : path.slice(0, slash);
 }
+
+/**
+ * Untriaged = an open to-do that landed in an inbox source (daily notes,
+ * `_inbox`, …) and nobody has looked at yet: no date and no priority. Triage
+ * decisions are plain task edits, so the queue needs no state of its own —
+ * setting a priority accepts, scheduling snoozes, cancelling declines, and
+ * moving the task into a project note files it.
+ */
+export function isUntriaged(task: Task, inboxFolders: string[]): boolean {
+  return (
+    task.status === 'todo' &&
+    task.priority === null &&
+    taskDate(task) === undefined &&
+    isInboxPath(task.path, inboxFolders)
+  );
+}
+
+function linkBasename(target: string): string {
+  const withoutHeading = target.split('#')[0] ?? '';
+  const slash = withoutHeading.lastIndexOf('/');
+  return withoutHeading.slice(slash + 1).replace(/\.md$/, '').trim();
+}
+
+/**
+ * The project a task belongs to: the subfolder of `projectsFolder` it lives
+ * in, else the first known project its text links to. Null = no project.
+ */
+export function projectOf(task: Task, options: QueryOptions): string | null {
+  const root = (options.projectsFolder ?? '').replace(/\/+$/, '');
+  if (root !== '' && task.path.startsWith(`${root}/`)) {
+    const rest = task.path.slice(root.length + 1);
+    const slash = rest.indexOf('/');
+    return slash === -1 ? rest.replace(/\.md$/, '') : rest.slice(0, slash);
+  }
+  const projects = options.projects;
+  if (projects) {
+    for (const link of task.links) {
+      const name = linkBasename(link);
+      if (projects.has(name)) return name;
+    }
+  }
+  return null;
+}
+
+function projectGroup(task: Task, options: QueryOptions): GroupSpec {
+  const project = projectOf(task, options);
+  if (project === null) return { key: 'zz-none', label: 'No project' };
+  const status = options.projects?.get(project);
+  return { key: `1-${project}`, label: project, sublabel: status };
+}
+
+const STATUS_GROUP: Record<Task['status'], GroupSpec> = {
+  todo: { key: '0-todo', label: 'To do' },
+  'in-progress': { key: '1-in-progress', label: 'In progress' },
+  done: { key: '2-done', label: 'Done' },
+  cancelled: { key: '3-cancelled', label: 'Cancelled' },
+  unknown: { key: '4-unknown', label: 'Other' },
+};
 
 /** Inbox first, then one bucket per source note, ordered by path. */
 function noteGroup(task: Task, inboxFolders: string[]): GroupSpec {
@@ -203,6 +272,10 @@ function groupSpec(
       return { key: 'all', label: '' };
     case 'note':
       return noteGroup(task, options.inboxFolders ?? []);
+    case 'project':
+      return projectGroup(task, options);
+    case 'status':
+      return STATUS_GROUP[task.status];
     case 'date':
       return dateGroup(task, today);
     case 'agenda':
@@ -233,7 +306,7 @@ export function queryTasks(
   options: QueryOptions = {},
 ): TaskGroupResult[] {
   const matched = sortTasks(
-    tasks.filter((task) => matchesTask(task, filter, today)),
+    tasks.filter((task) => matchesTask(task, filter, today, options)),
     sort,
   );
   const groups = new Map<string, TaskGroupResult>();

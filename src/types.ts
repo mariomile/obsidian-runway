@@ -71,11 +71,25 @@ export interface TaskFilter {
   exactDay?: DayKey | null;
   /** null = all priorities. */
   priorities: Priority[] | null;
+  /** Only tasks still waiting for triage (see `isUntriaged`). Overrides `due`. */
+  triage?: boolean;
 }
 
 export type TaskSort = 'due' | 'priority' | 'path';
 
-export type TaskGroup = 'none' | 'note' | 'date' | 'agenda' | 'priority' | 'tag' | 'folder';
+export type TaskGroup =
+  | 'none'
+  | 'note'
+  | 'project'
+  | 'status'
+  | 'date'
+  | 'agenda'
+  | 'priority'
+  | 'tag'
+  | 'folder';
+
+/** How a task surface lays out its results. */
+export type TaskLayout = 'list' | 'board';
 
 export interface TaskGroupResult {
   key: string;
@@ -95,8 +109,10 @@ export interface SavedView {
 export interface RunwaySettings {
   /** Folder path prefixes excluded from indexing (.obsidian is always excluded). */
   excludeFolders: string[];
-  /** Folders whose tasks are "not yet filed" — pinned as Inbox in the note grouping. */
+  /** Folders whose tasks are "not yet filed": pinned as Inbox in the note grouping, and the source of the triage queue. */
   inboxFolders: string[];
+  /** Folder holding one subfolder per project ('' = project grouping off). */
+  projectsFolder: string;
   /** User-named filter/sort/group presets. */
   savedViews: SavedView[];
   /** Days ahead shown in the sidebar Upcoming section. */
