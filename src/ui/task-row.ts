@@ -114,10 +114,11 @@ export function renderTaskRow(
     renderDateChip(meta, ctx, task, '⏳', task.scheduled, 'scheduled');
   }
   if (options.showNote !== false) {
-    const note = meta.createSpan({
-      cls: 'runway-chip runway-chip--note',
-      text: noteName(task.path),
-    });
+    // File icon first: a daily note is named like a date ("26-04-2025") and
+    // would otherwise read as a second date chip next to the real one.
+    const note = meta.createSpan({ cls: 'runway-chip runway-chip--note' });
+    setIcon(note.createSpan({ cls: 'runway-chip__icon' }), 'file-text');
+    note.createSpan({ cls: 'runway-chip__label', text: noteName(task.path) });
     note.setAttribute('aria-label', task.path);
     note.addEventListener('click', (event) => {
       event.stopPropagation();

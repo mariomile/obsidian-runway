@@ -39,6 +39,12 @@ function submenuOf(item: MenuItem): Menu {
 
 const PAGE_SIZE = 200;
 
+/** Below this panel width the full page switches to the compact layout. */
+const NARROW_PX = 560;
+
+/** Cards per board column before "Show more": a column of 1,800 is not a board. */
+const BOARD_PAGE_SIZE = 50;
+
 /** Prominent time views (Craft-style) — the primary way to slice the list.
    "Today" folds in overdue; the date grouping still shows an Overdue bucket. */
 const DUE_SEGMENTS: [DueFilter, string][] = [
@@ -146,7 +152,7 @@ export class TaskPanel {
   private filtersEl: HTMLElement | null = null;
   /** Persistent segments host in the header row (filled by renderFilters). */
   private segmentsEl: HTMLElement | null = null;
-  private layoutBtn: HTMLElement | null = null;
+  private resizeObserver: ResizeObserver | null = null;
   private bulkBarEl: HTMLElement | null = null;
   private resultsEl: HTMLElement | null = null;
   private countEl: HTMLElement | null = null;
@@ -187,6 +193,15 @@ export class TaskPanel {
   mount(): void {
     this.container.addClass('runway-panel');
     this.container.toggleClass('runway-panel--compact', this.options.compact);
+    // A full-page list docked in a side split is as narrow as the sidebar:
+    // switch to the dense layout by measured width, not by where it opened.
+    if (!this.options.compact) {
+      this.resizeObserver = new ResizeObserver(([entry]) => {
+        if (!entry) return;
+        this.container.toggleClass('runway-panel--compact', entry.contentRect.width < NARROW_PX);
+      });
+      this.resizeObserver.observe(this.container);
+    }
     this.container.tabIndex = 0;
     this.keyHandler = (event) => this.onKeyDown(event);
     this.container.addEventListener('keydown', this.keyHandler);
@@ -197,6 +212,8 @@ export class TaskPanel {
   unmount(): void {
     if (this.searchTimer !== null) clearTimeout(this.searchTimer);
     if (this.keyHandler) this.container.removeEventListener('keydown', this.keyHandler);
+    this.resizeObserver?.disconnect();
+    this.resizeObserver = null;
     this.keyHandler = null;
     this.unsubscribe?.();
     this.unsubscribe = null;
@@ -242,22 +259,11 @@ export class TaskPanel {
     // their own line in the compact sidebar (see .runway-segments rules).
     this.segmentsEl = actions.createDiv({ cls: 'mv-seg runway-segments' });
 
-    this.layoutBtn = createIconButton(actions, '', 'runway-iconbtn');
-    this.layoutBtn.addEventListener('click', () =>
-      this.update(() => {
-        this.state.layout = this.state.layout === 'board' ? 'list' : 'board';
-      }),
-    );
-
     const add = actions.createEl('button', { cls: 'runway-add-btn' });
     setIcon(add, 'plus');
     if (!this.options.compact) add.createSpan({ text: 'Task' });
     add.setAttribute('aria-label', 'New task');
     add.addEventListener('click', () => new QuickAddModal(this.ctx).open());
-
-    const overflow = createIconButton(actions, 'More', 'runway-iconbtn');
-    setIcon(overflow, 'more-horizontal');
-    overflow.addEventListener('click', (event) => this.openOverflowMenu(event));
 
     this.filtersEl = root.createDiv({ cls: 'runway-panel__filters' });
     this.bulkBarEl = root.createDiv({ cls: 'runway-bulkbar is-hidden' });
@@ -333,14 +339,7 @@ export class TaskPanel {
       }
     }
 
-    if (this.layoutBtn) {
-      const board = this.state.layout === 'board';
-      this.layoutBtn.empty();
-      setIcon(this.layoutBtn, board ? 'list' : 'columns-3');
-      this.layoutBtn.setAttribute('aria-label', board ? 'Show as list' : 'Show as board');
-    }
-
-    if (this.state.filter.triage && !this.options.compact) {
+    if (this.state.filter.triage) {
       bar.createDiv({
         cls: 'runway-triage-hint',
         text: '1–4 accept with priority · s snooze · m move to project · d decline',
@@ -370,11 +369,27 @@ export class TaskPanel {
         this.state.sort = value;
       }),
     );
-    if (this.state.layout === 'board') return;
+    if (this.state.layout !== 'board' && !this.state.filter.triage) this.groupMenu(controlEnd);
+
+    const board = this.state.layout === 'board';
+    const layout = createIconButton(controlEnd, board ? 'Show as list' : 'Show as board', 'runway-iconbtn');
+    setIcon(layout, board ? 'list' : 'columns-3');
+    layout.addEventListener('click', () =>
+      this.update(() => {
+        this.state.layout = board ? 'list' : 'board';
+      }),
+    );
+
+    const overflow = createIconButton(controlEnd, 'More', 'runway-iconbtn');
+    setIcon(overflow, 'more-horizontal');
+    overflow.addEventListener('click', (event) => this.openOverflowMenu(event));
+  }
+
+  private groupMenu(parent: HTMLElement): void {
     const groupOptions = GROUP_OPTIONS.filter(
       ([value]) => value !== 'project' || this.ctx.settings.projectsFolder !== '',
     );
-    this.iconMenu(controlEnd, 'layout-list', 'Group', groupOptions, this.state.group, (value) =>
+    this.iconMenu(parent, 'layout-list', 'Group', groupOptions, this.state.group, (value) =>
       this.update(() => {
         this.state.group = value;
         if (value === 'agenda') this.seedAgendaCollapse();
@@ -622,7 +637,8 @@ export class TaskPanel {
           this.ctx.index.all(),
           this.state.filter,
           this.state.sort,
-          this.state.group,
+          // Triage is one queue to work top-down; group headers only add noise.
+          this.state.filter.triage ? 'none' : this.state.group,
           today,
           this.queryOptions(),
         );
@@ -635,10 +651,16 @@ export class TaskPanel {
     // Drop selection entries whose tasks are gone (completed, edited away).
     for (const key of [...this.selection]) if (!this.taskByKey.has(key)) this.selection.delete(key);
 
+    this.container.toggleClass('runway-panel--board', board);
     if (board) {
       renderBoard(results, groups, {
         ctx: this.ctx,
         onCard: (task, card) => this.trackRow(task, card),
+        limit: (key) => (this.expanded.has(key) ? Infinity : BOARD_PAGE_SIZE),
+        onShowMore: (key) => {
+          this.expanded.add(key);
+          this.renderResults();
+        },
       });
       if (this.cursor >= this.visibleTasks.length) this.cursor = this.visibleTasks.length - 1;
       this.renderBulkBar();

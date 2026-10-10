@@ -93,6 +93,21 @@
   margin: 0 auto;
 }
 
+/* Board: three columns need the whole tab, not the reading column. */
+.runway-panel--board:not(.runway-panel--compact) {
+  max-width: none;
+}
+
+/* A narrow full-page list keeps the "Task" label in the DOM: hide it so the
+   add button stays an icon and the search row doesn't clip it. */
+.runway-panel--compact .runway-add-btn > span {
+  display: none;
+}
+
+.runway-panel--compact .runway-add-btn {
+  flex-shrink: 0;
+}
+
 /* Compact sidebar: dense — search + actions, then filters. */
 .runway-panel--compact {
   padding: 6px 8px 12px;
@@ -552,6 +567,11 @@
   color: var(--text-normal);
   cursor: var(--cursor);
   overflow-wrap: anywhere;
+  /* A pasted paragraph is still one task: three lines, then the file has it. */
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
 }
 
 .runway-row[data-status='done'] .runway-row__desc,
@@ -695,12 +715,32 @@
 }
 
 .runway-chip--note {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
   color: var(--text-faint);
   cursor: var(--cursor);
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 18em;
   transition: color var(--runway-t);
+}
+
+
+.runway-chip--note .runway-chip__icon {
+  display: flex;
+  flex-shrink: 0;
+}
+
+.runway-chip--note .runway-chip__icon svg {
+  width: 11px;
+  height: 11px;
+}
+
+.runway-chip--note .runway-chip__label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* mv-kit §6: gated, see the .runway-iconbtn:hover comment above. */
@@ -787,6 +827,10 @@
   margin-left: var(--size-2-2);
   font-variant-numeric: tabular-nums;
   color: var(--text-faint);
+}
+
+.runway-panel--compact .runway-triage-hint {
+  display: none;
 }
 
 .runway-triage-hint {
