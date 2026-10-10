@@ -108,9 +108,19 @@
   flex-shrink: 0;
 }
 
+/* Docked in a side split, core's sidedock rule (0,4,1) forces 2px 8px on every
+   view-content and beats both rules above, so the search sat flush against the
+   tab strip. Out-specify it, top/bottom only; core's 8px sides stay. */
+body:not(.is-mobile) .mod-sidedock .workspace-leaf-content > .view-content.runway-panel {
+  padding-top: var(--size-4-3);
+  padding-bottom: var(--size-4-3);
+}
+
 /* Compact sidebar: dense — search + actions, then filters. */
 .runway-panel--compact {
-  padding: 6px 8px 12px;
+  /* Same top breathing room as the page's own header row: the search field
+     must not sit flush against the pane's tab strip. */
+  padding: var(--size-4-3) var(--size-4-2) var(--size-4-3);
 }
 
 .runway-panel--compact .runway-filterbar__row {

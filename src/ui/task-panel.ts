@@ -201,11 +201,20 @@ export class TaskPanel {
         this.container.toggleClass('runway-panel--compact', entry.contentRect.width < NARROW_PX);
       });
       this.resizeObserver.observe(this.container);
+      // Observer callbacks ride the render loop, which Obsidian throttles in a
+      // background window: set the first state synchronously.
+      const width = this.container.getBoundingClientRect().width;
+      if (width > 0) this.container.toggleClass('runway-panel--compact', width < NARROW_PX);
     }
     this.container.tabIndex = 0;
     this.keyHandler = (event) => this.onKeyDown(event);
     this.container.addEventListener('keydown', this.keyHandler);
-    this.unsubscribe = this.ctx.index.subscribe(() => this.renderResults());
+    // Filters too: the Triage count is read from the index, and on a cold start
+    // the first render happens before indexing finishes.
+    this.unsubscribe = this.ctx.index.subscribe(() => {
+      this.renderFilters();
+      this.renderResults();
+    });
     this.renderChrome();
   }
 
