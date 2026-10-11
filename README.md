@@ -2,6 +2,16 @@
 
 Task management for [Obsidian](https://obsidian.md): a sidebar glance and a filterable full-page list over the checkbox tasks already in your notes. Fully compatible with the [Tasks plugin](https://publish.obsidian.md/tasks/) emoji syntax — your notes stay the source of truth, no migration, no separate database.
 
+<p align="center">
+  <img src="docs/list.png" width="900" alt="Runway: the task list grouped by project, next to the Horizon mini calendar" />
+</p>
+<p align="center"><em>The full-page task list, grouped by project, with Inbox pinned first.</em></p>
+
+<p align="center">
+  <img src="docs/board.png" width="900" alt="Runway: the status board" />
+</p>
+<p align="center"><em>The same tasks as a status board: To do, In progress, Done.</em></p>
+
 ## Views
 
 Sidebar and full page are the **same component** at two densities — identical filtering, grouping, accordion and keyboard behavior.
