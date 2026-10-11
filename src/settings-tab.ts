@@ -34,7 +34,9 @@ export class RunwaySettingTab extends PluginSettingTab {
 
     new Setting(containerEl)
       .setName('Inbox folders')
-      .setDesc('One per line. Tasks in these folders land in the Inbox section of the group-by-note view.')
+      .setDesc(
+        'One per line. Tasks in these folders land in the Inbox section of the group-by-note view, and new ones with no date or priority wait in Triage.',
+      )
       .addTextArea((text) => {
         text
           .setValue(this.plugin.settings.inboxFolders.join('\n'))
@@ -47,6 +49,21 @@ export class RunwaySettingTab extends PluginSettingTab {
           });
         text.inputEl.rows = 3;
       });
+
+    new Setting(containerEl)
+      .setName('Projects folder')
+      .setDesc(
+        'Folder with one subfolder per project. Tasks inside it, or linking to a project note, are grouped under that project. Leave empty to turn project grouping off.',
+      )
+      .addText((text) =>
+        text
+          .setPlaceholder('Projects')
+          .setValue(this.plugin.settings.projectsFolder)
+          .onChange(async (value) => {
+            this.plugin.settings.projectsFolder = value.trim();
+            await this.plugin.saveSettings();
+          }),
+      );
 
     new Setting(containerEl)
       .setName('"Upcoming" days in sidebar')
@@ -124,6 +141,8 @@ export class RunwaySettingTab extends PluginSettingTab {
         dropdown
           .addOptions({
             note: 'By note',
+            project: 'By project',
+            status: 'By status',
             none: 'None',
             date: 'By date',
             agenda: 'Agenda',

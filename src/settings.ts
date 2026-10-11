@@ -5,6 +5,7 @@ import type { RunwaySettings, SavedView, TaskFilter, TaskGroup, TaskSort } from 
 export const DEFAULT_SETTINGS: RunwaySettings = {
   excludeFolders: ['.archive'],
   inboxFolders: ['_inbox'],
+  projectsFolder: '',
   savedViews: [],
   sidebarUpcomingDays: 7,
   agendaHorizonDays: 14,
@@ -16,7 +17,17 @@ export const DEFAULT_SETTINGS: RunwaySettings = {
 };
 
 const SORTS: readonly TaskSort[] = ['due', 'priority', 'path'];
-const GROUPS: readonly TaskGroup[] = ['none', 'note', 'date', 'agenda', 'priority', 'tag', 'folder'];
+const GROUPS: readonly TaskGroup[] = [
+  'none',
+  'note',
+  'project',
+  'status',
+  'date',
+  'agenda',
+  'priority',
+  'tag',
+  'folder',
+];
 
 function parseSavedViews(value: unknown): SavedView[] {
   if (!Array.isArray(value)) return [];
@@ -38,6 +49,7 @@ export function parseSettings(data: unknown): RunwaySettings {
   return {
     excludeFolders: stringList(data.excludeFolders, DEFAULT_SETTINGS.excludeFolders),
     inboxFolders: stringList(data.inboxFolders, DEFAULT_SETTINGS.inboxFolders),
+    projectsFolder: stringValue(data.projectsFolder, DEFAULT_SETTINGS.projectsFolder),
     savedViews: parseSavedViews(data.savedViews),
     sidebarUpcomingDays: boundedNumber(
       data.sidebarUpcomingDays,

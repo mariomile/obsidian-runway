@@ -31,6 +31,13 @@ export default class RunwayPlugin extends Plugin {
     );
     this.edits = new TaskEditService(this.app, () => this.settings);
     this.index.start(this);
+    this.register(
+      this.index.onCompleted((tasks) => {
+        for (const task of tasks) {
+          void this.edits.stampDone({ path: task.path, line: task.line, rawText: task.rawText });
+        }
+      }),
+    );
     this.api = createRunwayApi(this.index, this.edits, (day) => this.openForDay(day));
 
     const ctx = this.context();
@@ -64,6 +71,21 @@ export default class RunwayPlugin extends Plugin {
           filter: { ...structuredClone(DEFAULT_FILTER), due: 'today' },
           group: 'date',
         }),
+    });
+    this.addCommand({
+      id: 'open-triage',
+      name: 'Triage (new tasks waiting for a decision)',
+      callback: () =>
+        void this.openListView({
+          filter: { ...structuredClone(DEFAULT_FILTER), triage: true },
+          group: 'note',
+          layout: 'list',
+        }),
+    });
+    this.addCommand({
+      id: 'open-board',
+      name: 'Board (by status)',
+      callback: () => void this.openListView({ layout: 'board' }),
     });
     this.addCommand({
       id: 'open-upcoming',

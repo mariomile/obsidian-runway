@@ -1,10 +1,10 @@
 import { Notice } from 'obsidian';
 import type { App, TFile } from 'obsidian';
 
-import { applyLineEdit, locateLine, removeLine } from '../core/line-edit.ts';
+import { applyLineEdit, locateLine, removeTaskBlock } from '../core/line-edit.ts';
 import { parseTaskLine } from '../core/parse.ts';
 import { completeRecurring } from '../core/recurrence.ts';
-import { isChildNote, noteLine } from '../core/task-note.ts';
+import { isChildNote, noteLine, noteTextOf } from '../core/task-note.ts';
 import {
   removeDateField,
   rewriteDate,
@@ -66,6 +66,18 @@ export class TaskEditService {
       return changed;
     }
     return this.editLine(ref, (line) => transitionStatus(line, target, todayKey()));
+  }
+
+  /**
+   * Write today's ✅ on a task ticked done in the editor, which leaves only
+   * `[x]`. Silent: the user did the completing, this only records when.
+   * Recurring tasks are skipped — completing those needs the next occurrence.
+   */
+  async stampDone(ref: TaskRef): Promise<boolean> {
+    if (ref.rawText.includes('🔁')) return false;
+    return this.editLine(ref, (line) => transitionStatus(line, 'done', todayKey()), {
+      silent: true,
+    });
   }
 
   /** Rewrite one date field; success Notice carries a 10s undo. */
@@ -168,13 +180,28 @@ export class TaskEditService {
       new Notice(`Runway: could not create "${targetPath}".`);
       return false;
     }
-    const movedLine = ref.rawText.replace(/^\s+/, '');
+    const sourceContent = await this.app.vault.cachedRead(source);
+    const sourceLines = sourceContent.split('\n');
+    const sourceIndex = locateLine(sourceLines, ref);
+    if (sourceIndex === -1) {
+      new Notice('Runway: the task changed in the meantime, try again.');
+      return false;
+    }
+    const sourceTaskLine = sourceLines[sourceIndex] ?? ref.rawText;
+    const childCandidate = sourceLines[sourceIndex + 1];
+    const sourceChild = isChildNote(sourceTaskLine, childCandidate)
+      ? childCandidate
+      : undefined;
+    const movedLine = sourceTaskLine.replace(/^\s+/, '');
+    const movedBlock = sourceChild === undefined
+      ? movedLine
+      : `${movedLine}\n${noteLine(movedLine, noteTextOf(sourceChild))}`;
     await this.app.vault.process(target, (content) =>
-      appendTaskLine(content, movedLine, this.getSettings().quickAddHeading),
+      appendTaskLine(content, movedBlock, this.getSettings().quickAddHeading),
     );
     let removed = false;
     await this.app.vault.process(source, (content) => {
-      const result = removeLine(content, ref);
+      const result = removeTaskBlock(content, ref, sourceChild, isChildNote);
       removed = result.removed;
       return result.content;
     });

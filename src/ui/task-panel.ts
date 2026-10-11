@@ -2,16 +2,20 @@ import { Menu, Notice, setIcon } from 'obsidian';
 import type { MenuItem } from 'obsidian';
 
 import { todayKey } from '../dates.ts';
-import { DEFAULT_FILTER, queryTasks } from '../core/query.ts';
-import { PRIORITY_EMOJI } from '../core/parse.ts';
+import { DEFAULT_FILTER, isUntriaged, queryTasks } from '../core/query.ts';
+import { onBoard } from '../core/board.ts';
+import { PRIORITIES, PRIORITY_ICON, PRIORITY_LABEL } from './priority.ts';
 import { renderTaskRow } from './task-row.ts';
-import { promptTaskNote, refOf } from './task-menu.ts';
+import { PRIORITY_ITEMS, promptTaskNote, refOf } from './task-menu.ts';
+import { renderBoard } from './kanban.ts';
+import { listProjects } from './projects.ts';
 import { showDateMenu } from './date-menu.ts';
 import { pickNote } from './note-picker.ts';
 import { QuickAddModal } from './quick-add-modal.ts';
 import { promptText } from './prompt-modal.ts';
 import { createChip, createIconButton, makeButtonLike, setChipPressed } from '../kit/controls.ts';
 import type { RunwayContext } from './context.ts';
+import type { QueryOptions } from '../core/query.ts';
 import type {
   DueFilter,
   Priority,
@@ -19,6 +23,7 @@ import type {
   Task,
   TaskFilter,
   TaskGroup,
+  TaskLayout,
   TaskSort,
   TaskStatus,
 } from '../types.ts';
@@ -33,6 +38,12 @@ function submenuOf(item: MenuItem): Menu {
 }
 
 const PAGE_SIZE = 200;
+
+/** Below this panel width the full page switches to the compact layout. */
+const NARROW_PX = 560;
+
+/** Cards per board column before "Show more": a column of 1,800 is not a board. */
+const BOARD_PAGE_SIZE = 50;
 
 /** Prominent time views (Craft-style) — the primary way to slice the list.
    "Today" folds in overdue; the date grouping still shows an Overdue bucket. */
@@ -72,6 +83,8 @@ const SORT_OPTIONS: [TaskSort, string][] = [
 
 const GROUP_OPTIONS: [TaskGroup, string][] = [
   ['note', 'Note'],
+  ['project', 'Project'],
+  ['status', 'Status'],
   ['date', 'Date'],
   ['agenda', 'Agenda'],
   ['priority', 'Priority'],
@@ -80,16 +93,25 @@ const GROUP_OPTIONS: [TaskGroup, string][] = [
   ['none', 'None'],
 ];
 
+/** Number keys set priority (Linear-style); in Triage that is "accept". */
+const PRIORITY_KEYS: Record<string, Priority | null> = {
+  '1': 'highest',
+  '2': 'high',
+  '3': 'medium',
+  '4': 'low',
+  '0': null,
+};
+
 /** Agenda's far buckets open collapsed — the near days are what you glance at. */
 const AGENDA_FAR_KEYS = ['y-later', 'zz-none'];
 
-const PRIORITY_OPTIONS: [string, string][] = [
-  ['', 'Priority'],
-  ['highest', `${PRIORITY_EMOJI.highest} Highest`],
-  ['high', `${PRIORITY_EMOJI.high} High`],
-  ['medium', `${PRIORITY_EMOJI.medium} Medium`],
-  ['low', `${PRIORITY_EMOJI.low} Low`],
-  ['lowest', `${PRIORITY_EMOJI.lowest} Lowest`],
+const PRIORITY_OPTIONS: [string, string, string | null][] = [
+  ['', 'Any priority', null],
+  ...PRIORITIES.map((priority): [string, string, string] => [
+    priority,
+    PRIORITY_LABEL[priority],
+    PRIORITY_ICON[priority],
+  ]),
 ];
 
 function shortLabel(options: readonly [string, string][], value: string): string {
@@ -102,6 +124,7 @@ export type TaskPanelState = {
   sort: TaskSort;
   group: TaskGroup;
   collapsed: string[];
+  layout: TaskLayout;
 };
 
 export interface TaskPanelOptions {
@@ -130,6 +153,7 @@ export class TaskPanel {
   private filtersEl: HTMLElement | null = null;
   /** Persistent segments host in the header row (filled by renderFilters). */
   private segmentsEl: HTMLElement | null = null;
+  private resizeObserver: ResizeObserver | null = null;
   private bulkBarEl: HTMLElement | null = null;
   private resultsEl: HTMLElement | null = null;
   private countEl: HTMLElement | null = null;
@@ -159,6 +183,7 @@ export class TaskPanel {
       sort: initial.sort ?? ctx.settings.defaultSort,
       group: initial.group ?? ctx.settings.defaultGroup,
       collapsed: initial.collapsed ?? [],
+      layout: initial.layout === 'board' ? 'board' : 'list',
     };
     this.collapsed = new Set(this.state.collapsed);
     // Default-group agenda (from settings) with no saved collapse state gets the
@@ -169,16 +194,36 @@ export class TaskPanel {
   mount(): void {
     this.container.addClass('runway-panel');
     this.container.toggleClass('runway-panel--compact', this.options.compact);
+    // A full-page list docked in a side split is as narrow as the sidebar:
+    // switch to the dense layout by measured width, not by where it opened.
+    if (!this.options.compact) {
+      this.resizeObserver = new ResizeObserver(([entry]) => {
+        if (!entry) return;
+        this.container.toggleClass('runway-panel--compact', entry.contentRect.width < NARROW_PX);
+      });
+      this.resizeObserver.observe(this.container);
+      // Observer callbacks ride the render loop, which Obsidian throttles in a
+      // background window: set the first state synchronously.
+      const width = this.container.getBoundingClientRect().width;
+      if (width > 0) this.container.toggleClass('runway-panel--compact', width < NARROW_PX);
+    }
     this.container.tabIndex = 0;
     this.keyHandler = (event) => this.onKeyDown(event);
     this.container.addEventListener('keydown', this.keyHandler);
-    this.unsubscribe = this.ctx.index.subscribe(() => this.renderResults());
+    // Filters too: the Triage count is read from the index, and on a cold start
+    // the first render happens before indexing finishes.
+    this.unsubscribe = this.ctx.index.subscribe(() => {
+      this.renderFilters();
+      this.renderResults();
+    });
     this.renderChrome();
   }
 
   unmount(): void {
     if (this.searchTimer !== null) window.clearTimeout(this.searchTimer);
     if (this.keyHandler) this.container.removeEventListener('keydown', this.keyHandler);
+    this.resizeObserver?.disconnect();
+    this.resizeObserver = null;
     this.keyHandler = null;
     this.unsubscribe?.();
     this.unsubscribe = null;
@@ -230,10 +275,6 @@ export class TaskPanel {
     add.setAttribute('aria-label', 'New task');
     add.addEventListener('click', () => new QuickAddModal(this.ctx).open());
 
-    const overflow = createIconButton(actions, 'More', 'runway-iconbtn');
-    setIcon(overflow, 'more-horizontal');
-    overflow.addEventListener('click', (event) => this.openOverflowMenu(event));
-
     this.filtersEl = root.createDiv({ cls: 'runway-panel__filters' });
     this.bulkBarEl = root.createDiv({ cls: 'runway-bulkbar is-hidden' });
     this.resultsEl = root.createDiv({ cls: 'runway-panel__results' });
@@ -273,8 +314,22 @@ export class TaskPanel {
     const segments = this.segmentsEl;
     if (segments) {
       segments.empty();
+      const triage = segments.createEl('button', {
+        cls: 'mv-seg-item runway-segment runway-segment--triage',
+        attr: { 'aria-pressed': String(this.state.filter.triage === true) },
+      });
+      triage.createSpan({ text: 'Triage' });
+      const waiting = this.triageCount();
+      if (waiting > 0) triage.createSpan({ cls: 'runway-segment__count', text: String(waiting) });
+      triage.addEventListener('click', () =>
+        this.update(() => {
+          this.state.filter.triage = true;
+          this.state.filter.exactDay = null;
+        }),
+      );
       for (const [value, label] of DUE_SEGMENTS) {
-        const active = !this.state.filter.exactDay && this.state.filter.due === value;
+        const active =
+          !this.state.filter.triage && !this.state.filter.exactDay && this.state.filter.due === value;
         // <button> è legittimo QUI e solo qui: `.mv-seg > .mv-seg-item` è un
         // selettore figlio a (0,2,0) e batte `button:not(.clickable-icon)` di
         // app.css. I primitivi standalone (chip, icon-btn) non hanno questa
@@ -288,9 +343,17 @@ export class TaskPanel {
           this.update(() => {
             this.state.filter.due = value;
             this.state.filter.exactDay = null;
+            this.state.filter.triage = false;
           }),
         );
       }
+    }
+
+    if (this.state.filter.triage) {
+      bar.createDiv({
+        cls: 'runway-triage-hint',
+        text: '1–4 accept with priority · s snooze · m move to project · d decline',
+      });
     }
 
     // Secondary: one "Filters" chip (status + tag + folder + priority) + sort/group.
@@ -316,12 +379,52 @@ export class TaskPanel {
         this.state.sort = value;
       }),
     );
-    this.iconMenu(controlEnd, 'layout-list', 'Group', GROUP_OPTIONS, this.state.group, (value) =>
+    if (this.state.layout !== 'board' && !this.state.filter.triage) this.groupMenu(controlEnd);
+
+    const board = this.state.layout === 'board';
+    const layout = createIconButton(controlEnd, board ? 'Show as list' : 'Show as board', 'runway-iconbtn');
+    setIcon(layout, board ? 'list' : 'columns-3');
+    layout.addEventListener('click', () =>
+      this.update(() => {
+        this.state.layout = board ? 'list' : 'board';
+      }),
+    );
+
+    const overflow = createIconButton(controlEnd, 'More', 'runway-iconbtn');
+    setIcon(overflow, 'more-horizontal');
+    overflow.addEventListener('click', (event) => this.openOverflowMenu(event));
+  }
+
+  private groupMenu(parent: HTMLElement): void {
+    const groupOptions = GROUP_OPTIONS.filter(
+      ([value]) => value !== 'project' || this.ctx.settings.projectsFolder !== '',
+    );
+    this.iconMenu(parent, 'layout-list', 'Group', groupOptions, this.state.group, (value) =>
       this.update(() => {
         this.state.group = value;
         if (value === 'agenda') this.seedAgendaCollapse();
       }),
     );
+  }
+
+  private triageCount(): number {
+    if (!this.ctx.index.isReady()) return 0;
+    const inbox = this.ctx.settings.inboxFolders;
+    let count = 0;
+    for (const task of this.ctx.index.all()) if (isUntriaged(task, inbox)) count += 1;
+    return count;
+  }
+
+  private queryOptions(): QueryOptions {
+    const projectsFolder = this.ctx.settings.projectsFolder;
+    return {
+      inboxFolders: this.ctx.settings.inboxFolders,
+      agendaHorizonDays: this.ctx.settings.agendaHorizonDays,
+      projectsFolder,
+      projects: new Map(
+        listProjects(this.ctx.app, projectsFolder).map((project) => [project.name, project.status]),
+      ),
+    };
   }
 
   /** Icon-only button opening a single-select menu (sort / group). */
@@ -386,10 +489,11 @@ export class TaskPanel {
       const current = this.state.filter.priorities?.[0] ?? '';
       item.setTitle('Priority').setIcon('flag');
       const sub = submenuOf(item);
-      for (const [value, label] of PRIORITY_OPTIONS) {
+      for (const [value, label, icon] of PRIORITY_OPTIONS) {
         sub.addItem((sitem: MenuItem) =>
           sitem
             .setTitle(label)
+            .setIcon(icon)
             .setChecked(value === current)
             .onClick(() =>
               this.update(() => {
@@ -527,17 +631,28 @@ export class TaskPanel {
       return;
     }
 
-    const groups = queryTasks(
-      this.ctx.index.all(),
-      this.state.filter,
-      this.state.sort,
-      this.state.group,
-      todayKey(),
-      {
-        inboxFolders: this.ctx.settings.inboxFolders,
-        agendaHorizonDays: this.ctx.settings.agendaHorizonDays,
-      },
-    );
+    const today = todayKey();
+    const board = this.state.layout === 'board';
+    const groups = board
+      ? queryTasks(
+          this.ctx.index.all().filter((task) => onBoard(task, today)),
+          // The board's columns ARE the status split; onBoard already picked
+          // which statuses (and how much of Done) belong there.
+          { ...this.state.filter, statuses: [] },
+          this.state.sort,
+          'status',
+          today,
+          this.queryOptions(),
+        )
+      : queryTasks(
+          this.ctx.index.all(),
+          this.state.filter,
+          this.state.sort,
+          // Triage is one queue to work top-down; group headers only add noise.
+          this.state.filter.triage ? 'none' : this.state.group,
+          today,
+          this.queryOptions(),
+        );
     for (const group of groups) {
       for (const task of group.tasks) this.taskByKey.set(taskKey(task), task);
     }
@@ -547,10 +662,31 @@ export class TaskPanel {
     // Drop selection entries whose tasks are gone (completed, edited away).
     for (const key of [...this.selection]) if (!this.taskByKey.has(key)) this.selection.delete(key);
 
+    this.container.toggleClass('runway-panel--board', board);
+    if (board) {
+      renderBoard(results, groups, {
+        ctx: this.ctx,
+        onCard: (task, card) => this.trackRow(task, card),
+        limit: (key) => (this.expanded.has(key) ? Infinity : BOARD_PAGE_SIZE),
+        onShowMore: (key) => {
+          this.expanded.add(key);
+          this.renderResults();
+        },
+      });
+      if (this.cursor >= this.visibleTasks.length) this.cursor = this.visibleTasks.length - 1;
+      this.renderBulkBar();
+      return;
+    }
+
     if (total === 0) {
       this.cursor = -1;
       this.renderBulkBar();
-      results.createDiv({ cls: 'runway-empty', text: 'No task matches the filters.' });
+      results.createDiv({
+        cls: 'runway-empty',
+        text: this.state.filter.triage
+          ? 'Triage is clear. New tasks from your inbox folders with no date or priority land here.'
+          : 'No task matches the filters.',
+      });
       return;
     }
 
@@ -628,8 +764,28 @@ export class TaskPanel {
         cursor: index === this.cursor,
         selected: this.selection.has(taskKey(task)),
       });
-      // Modifier-click selects without triggering the row's open/complete handlers.
-      rowEl.addEventListener(
+      if (this.state.filter.triage) this.renderTriageActions(rowEl, task);
+      this.trackRow(task, rowEl);
+    }
+    if (tasks.length > visible.length) {
+      const more = body.createEl('button', {
+        cls: 'runway-group__more',
+        text: `Show ${tasks.length - visible.length} more`,
+      });
+      more.addEventListener('click', () => {
+        this.expanded.add(key);
+        this.renderResults();
+      });
+    }
+  }
+
+  /** Register a rendered row (list) or card (board) for cursor + selection. */
+  private trackRow(task: Task, rowEl: HTMLElement): void {
+    const index = this.visibleTasks.length;
+    rowEl.toggleClass('is-cursor', index === this.cursor);
+    rowEl.toggleClass('is-selected', this.selection.has(taskKey(task)));
+    // Modifier-click selects without triggering the row's open/complete handlers.
+    rowEl.addEventListener(
         'click',
         (event) => {
           if (event.metaKey || event.ctrlKey) {
@@ -644,19 +800,82 @@ export class TaskPanel {
         },
         { capture: true },
       );
-      this.visibleTasks.push(task);
-      this.rowEls.push(rowEl);
-    }
-    if (tasks.length > visible.length) {
-      const more = body.createEl('button', {
-        cls: 'runway-group__more',
-        text: `Show ${tasks.length - visible.length} more`,
+    this.visibleTasks.push(task);
+    this.rowEls.push(rowEl);
+  }
+
+  /** Inline Accept · Snooze · Move · Decline, so triage works without a keyboard. */
+  private renderTriageActions(rowEl: HTMLElement, task: Task): void {
+    const more = rowEl.querySelector('.runway-row__more');
+    const actions = createDiv({ cls: 'runway-row__triage' });
+    rowEl.insertBefore(actions, more);
+    const action = (icon: string, label: string, run: (event: MouseEvent) => void): void => {
+      const button = createIconButton(actions, label, 'runway-iconbtn runway-triage-btn');
+      setIcon(button, icon);
+      button.addEventListener('click', (event) => {
+        event.stopPropagation();
+        run(event);
       });
-      more.addEventListener('click', () => {
-        this.expanded.add(key);
-        this.renderResults();
-      });
+    };
+    action('flag', 'Accept with priority', (event) => this.pickPriority(event, [task]));
+    action('alarm-clock', 'Snooze to a date', (event) => this.snooze(event, [task]));
+    action('folder-input', 'Move to project', () => this.moveTargets([task]));
+    action('x', 'Decline', () => void this.declineTargets([task]));
+  }
+
+  private pickPriority(event: MouseEvent, tasks: Task[]): void {
+    const menu = new Menu();
+    for (const [priority, label, icon] of PRIORITY_ITEMS) {
+      if (priority === null) continue;
+      menu.addItem((item) =>
+        item
+          .setTitle(label)
+          .setIcon(icon)
+          .onClick(() => void this.prioritizeTargets(tasks, priority)),
+      );
     }
+    menu.showAtMouseEvent(event);
+  }
+
+  private snooze(event: MouseEvent, tasks: Task[]): void {
+    showDateMenu(event, this.ctx.app, undefined, {
+      onPick: (date) => {
+        void (async () => {
+          for (const task of tasks) await this.ctx.edits.reschedule(refOf(task), date, '⏳');
+          this.clearSelection();
+        })();
+      },
+    });
+  }
+
+  private async prioritizeTargets(tasks: Task[], priority: Priority | null): Promise<void> {
+    for (const task of tasks) await this.ctx.edits.setPriority(refOf(task), priority);
+    this.clearSelection();
+  }
+
+  private async declineTargets(tasks: Task[]): Promise<void> {
+    for (const task of tasks) await this.ctx.edits.setStatus(refOf(task), 'cancelled');
+    this.clearSelection();
+  }
+
+  /** Move into a project note when projects are configured, else any note. */
+  private moveTargets(tasks: Task[]): void {
+    if (tasks.length === 0) return;
+    const projectNotes = listProjects(this.ctx.app, this.ctx.settings.projectsFolder)
+      .map((project) => project.file)
+      .filter((file) => file !== null);
+    const placeholder = projectNotes.length > 0 ? 'Move to project…' : 'Move tasks to…';
+    pickNote(
+      this.ctx.app,
+      placeholder,
+      (file) => {
+        void (async () => {
+          for (const task of tasks) await this.ctx.edits.moveToNote(refOf(task), file.path);
+          this.clearSelection();
+        })();
+      },
+      projectNotes.length > 0 ? projectNotes : undefined,
+    );
   }
 
   // ── Keyboard cursor + multi-selection ───────────────────────────────
@@ -700,6 +919,31 @@ export class TaskPanel {
       case ' ':
         this.toggleCursorSelection();
         break;
+      case '0':
+      case '1':
+      case '2':
+      case '3':
+      case '4': {
+        const targets = this.targets();
+        if (targets.length === 0) return;
+        void this.prioritizeTargets(targets, PRIORITY_KEYS[event.key] ?? null);
+        break;
+      }
+      case 's': {
+        const targets = this.targets();
+        if (targets.length === 0) return;
+        this.snooze(this.menuEventAtCursor(), targets);
+        break;
+      }
+      case 'm':
+        this.moveTargets(this.targets());
+        break;
+      case 'd': {
+        const targets = this.targets();
+        if (targets.length === 0) return;
+        void this.declineTargets(targets);
+        break;
+      }
       case 'Escape':
         if (this.selection.size === 0) return;
         this.clearSelection();
@@ -708,6 +952,12 @@ export class TaskPanel {
         return;
     }
     event.preventDefault();
+  }
+
+  /** A synthetic mouse position under the cursor row, for keyboard-opened menus. */
+  private menuEventAtCursor(): MouseEvent {
+    const rect = (this.rowEls[this.cursor] ?? this.container).getBoundingClientRect();
+    return new MouseEvent('click', { clientX: rect.left + 24, clientY: rect.bottom });
   }
 
   private moveCursor(delta: number): void {
@@ -817,15 +1067,10 @@ export class TaskPanel {
     });
 
     const move = createChip(actions, 'Move', { extraClass: 'mv-chip--pill runway-pill' });
-    move.addEventListener('click', () => {
-      const targets = this.targets();
-      pickNote(this.ctx.app, 'Move tasks to…', (file) => {
-        void (async () => {
-          for (const task of targets) await this.ctx.edits.moveToNote(refOf(task), file.path);
-          this.clearSelection();
-        })();
-      });
-    });
+    move.addEventListener('click', () => this.moveTargets(this.targets()));
+
+    const decline = createChip(actions, 'Decline', { extraClass: 'mv-chip--pill runway-pill' });
+    decline.addEventListener('click', () => void this.declineTargets(this.targets()));
 
     const clear = createIconButton(actions, 'Deselect', 'runway-iconbtn');
     setIcon(clear, 'x');

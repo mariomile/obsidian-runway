@@ -3,15 +3,17 @@ import type { App, TFile } from 'obsidian';
 
 class NotePickerModal extends FuzzySuggestModal<TFile> {
   private readonly onPick: (file: TFile) => void;
+  private readonly files: TFile[] | undefined;
 
-  constructor(app: App, placeholder: string, onPick: (file: TFile) => void) {
+  constructor(app: App, placeholder: string, onPick: (file: TFile) => void, files?: TFile[]) {
     super(app);
     this.onPick = onPick;
+    this.files = files;
     this.setPlaceholder(placeholder);
   }
 
   getItems(): TFile[] {
-    return this.app.vault.getMarkdownFiles();
+    return this.files ?? this.app.vault.getMarkdownFiles();
   }
 
   getItemText(file: TFile): string {
@@ -23,11 +25,12 @@ class NotePickerModal extends FuzzySuggestModal<TFile> {
   }
 }
 
-/** Fuzzy note picker over all markdown files. */
+/** Fuzzy note picker over `files`, or every markdown file when omitted. */
 export function pickNote(
   app: App,
   placeholder: string,
   onPick: (file: TFile) => void,
+  files?: TFile[],
 ): void {
-  new NotePickerModal(app, placeholder, onPick).open();
+  new NotePickerModal(app, placeholder, onPick, files).open();
 }
