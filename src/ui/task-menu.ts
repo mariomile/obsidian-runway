@@ -4,7 +4,7 @@ import type { App } from 'obsidian';
 import { buildDateMenuItems } from './date-menu.ts';
 import { pickNote } from './note-picker.ts';
 import { promptText } from './prompt-modal.ts';
-import { PRIORITY_EMOJI } from '../core/parse.ts';
+import { PRIORITIES, PRIORITY_ICON, PRIORITY_LABEL } from './priority.ts';
 import type { RunwayContext } from './context.ts';
 import type { TaskRef } from '../edits/task-edit.ts';
 import type { Priority, Task, TaskStatus } from '../types.ts';
@@ -58,13 +58,13 @@ const STATUS_ITEMS: [Exclude<TaskStatus, 'unknown'>, string, string][] = [
   ['cancelled', 'Cancelled', 'x-circle'],
 ];
 
-export const PRIORITY_ITEMS: [Priority | null, string][] = [
-  ['highest', `${PRIORITY_EMOJI.highest} Highest`],
-  ['high', `${PRIORITY_EMOJI.high} High`],
-  ['medium', `${PRIORITY_EMOJI.medium} Medium`],
-  ['low', `${PRIORITY_EMOJI.low} Low`],
-  ['lowest', `${PRIORITY_EMOJI.lowest} Lowest`],
-  [null, 'No priority'],
+export const PRIORITY_ITEMS: [Priority | null, string, string][] = [
+  ...PRIORITIES.map((priority): [Priority, string, string] => [
+    priority,
+    PRIORITY_LABEL[priority],
+    PRIORITY_ICON[priority],
+  ]),
+  [null, 'No priority', 'minus'],
 ];
 
 export function refOf(task: Task): TaskRef {
@@ -108,10 +108,13 @@ export function showTaskMenu(event: MouseEvent, ctx: RunwayContext, task: Task):
     });
 
     menu.addSeparator();
-    for (const [priority, label] of PRIORITY_ITEMS) {
+    for (const [priority, label, icon] of PRIORITY_ITEMS) {
       if (priority === task.priority) continue;
       menu.addItem((item) =>
-        item.setTitle(label).onClick(() => void ctx.edits.setPriority(ref, priority)),
+        item
+          .setTitle(label)
+          .setIcon(icon)
+          .onClick(() => void ctx.edits.setPriority(ref, priority)),
       );
     }
 

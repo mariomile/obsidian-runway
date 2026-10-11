@@ -93,9 +93,34 @@
   margin: 0 auto;
 }
 
+/* Board: three columns need the whole tab, not the reading column. */
+.runway-panel--board:not(.runway-panel--compact) {
+  max-width: none;
+}
+
+/* A narrow full-page list keeps the "Task" label in the DOM: hide it so the
+   add button stays an icon and the search row doesn't clip it. */
+.runway-panel--compact .runway-add-btn > span {
+  display: none;
+}
+
+.runway-panel--compact .runway-add-btn {
+  flex-shrink: 0;
+}
+
+/* Docked in a side split, core's sidedock rule (0,4,1) forces 2px 8px on every
+   view-content and beats both rules above, so the search sat flush against the
+   tab strip. Out-specify it, top/bottom only; core's 8px sides stay. */
+body:not(.is-mobile) .mod-sidedock .workspace-leaf-content > .view-content.runway-panel {
+  padding-top: var(--size-4-3);
+  padding-bottom: var(--size-4-3);
+}
+
 /* Compact sidebar: dense — search + actions, then filters. */
 .runway-panel--compact {
-  padding: 6px 8px 12px;
+  /* Same top breathing room as the page's own header row: the search field
+     must not sit flush against the pane's tab strip. */
+  padding: var(--size-4-3) var(--size-4-2) var(--size-4-3);
 }
 
 .runway-panel--compact .runway-filterbar__row {
@@ -552,6 +577,11 @@
   color: var(--text-normal);
   cursor: var(--cursor);
   overflow-wrap: anywhere;
+  /* A pasted paragraph is still one task: three lines, then the file has it. */
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
 }
 
 .runway-row[data-status='done'] .runway-row__desc,
@@ -691,16 +721,57 @@
 }
 
 .runway-chip--priority {
-  font-size: 0.8em;
+  display: inline-flex;
+  align-items: center;
+  color: var(--text-muted);
+}
+
+.runway-chip--priority svg {
+  width: 13px;
+  height: 13px;
+}
+
+/* Linear's ramp: urgent reads red, high orange, the rest stay quiet. */
+.runway-chip--priority-highest {
+  color: var(--color-red);
+}
+
+.runway-chip--priority-high {
+  color: var(--color-orange);
+}
+
+.runway-chip--priority-low,
+.runway-chip--priority-lowest {
+  color: var(--text-faint);
 }
 
 .runway-chip--note {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
   color: var(--text-faint);
   cursor: var(--cursor);
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 18em;
   transition: color var(--runway-t);
+}
+
+
+.runway-chip--note .runway-chip__icon {
+  display: flex;
+  flex-shrink: 0;
+}
+
+.runway-chip--note .runway-chip__icon svg {
+  width: 11px;
+  height: 11px;
+}
+
+.runway-chip--note .runway-chip__label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* mv-kit §6: gated, see the .runway-iconbtn:hover comment above. */
@@ -787,6 +858,10 @@
   margin-left: var(--size-2-2);
   font-variant-numeric: tabular-nums;
   color: var(--text-faint);
+}
+
+.runway-panel--compact .runway-triage-hint {
+  display: none;
 }
 
 .runway-triage-hint {

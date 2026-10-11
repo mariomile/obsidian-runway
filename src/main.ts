@@ -31,6 +31,13 @@ export default class RunwayPlugin extends Plugin {
     );
     this.edits = new TaskEditService(this.app, () => this.settings);
     this.index.start(this);
+    this.register(
+      this.index.onCompleted((tasks) => {
+        for (const task of tasks) {
+          void this.edits.stampDone({ path: task.path, line: task.line, rawText: task.rawText });
+        }
+      }),
+    );
     this.api = createRunwayApi(this.index, this.edits, (day) => this.openForDay(day));
 
     const ctx = this.context();

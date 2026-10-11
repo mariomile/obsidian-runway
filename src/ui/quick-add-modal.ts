@@ -3,6 +3,7 @@ import { Modal, Notice } from 'obsidian';
 import { addDays, todayKey } from '../dates.ts';
 import { dailyNotePath } from '../edits/daily-note.ts';
 import { PRIORITY_EMOJI } from '../core/parse.ts';
+import { PRIORITIES, PRIORITY_LABEL } from './priority.ts';
 import { parseNaturalDate } from '../core/natural-date.ts';
 import { pickNote } from './note-picker.ts';
 import type { RunwayContext } from './context.ts';
@@ -63,11 +64,7 @@ export class QuickAddModal extends Modal {
     const select = priorityRow.createEl('select', { cls: 'dropdown' });
     const priorities: [string, Priority | ''][] = [
       ['No priority', ''],
-      [`${PRIORITY_EMOJI.highest} Highest`, 'highest'],
-      [`${PRIORITY_EMOJI.high} High`, 'high'],
-      [`${PRIORITY_EMOJI.medium} Medium`, 'medium'],
-      [`${PRIORITY_EMOJI.low} Low`, 'low'],
-      [`${PRIORITY_EMOJI.lowest} Lowest`, 'lowest'],
+      ...PRIORITIES.map((priority): [string, Priority] => [PRIORITY_LABEL[priority], priority]),
     ];
     for (const [label, value] of priorities) {
       select.createEl('option', { text: label, value });
