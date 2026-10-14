@@ -80,8 +80,9 @@ export class TaskIndexService {
         if (this.isExcluded(file.path)) return;
         const before = this.core.fileTasks(file.path);
         const after = extractTasks(file.path, data, cache);
-        this.core.setFile(file.path, after);
-        this.queueNotify();
+        // Edits to notes without tasks (or to non-task lines) change nothing the
+        // panels render: skip the debounced re-render of every open view.
+        if (this.core.setFile(file.path, after)) this.queueNotify();
         if (!this.ready) return;
         const completed = newlyCompleted(before, after);
         if (completed.length > 0) for (const listener of this.completedListeners) listener(completed);
