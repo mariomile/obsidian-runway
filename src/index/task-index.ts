@@ -1,5 +1,16 @@
 import type { Task } from '../types.ts';
 
+/** A task is fully determined by its location, raw line and attached note. */
+function sameTasks(a: readonly Task[], b: readonly Task[]): boolean {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    const x = a[i] as Task;
+    const y = b[i] as Task;
+    if (x.line !== y.line || x.rawText !== y.rawText || x.note !== y.note) return false;
+  }
+  return true;
+}
+
 /**
  * Pure index core: tasks bucketed by file path, with a cached flat snapshot.
  * All vault/event wiring lives in the service; this stays trivially testable.
@@ -9,13 +20,17 @@ export class TaskIndexCore {
   private readonly listeners = new Set<() => void>();
   private snapshot: Task[] | null = null;
 
-  setFile(path: string, tasks: Task[]): void {
+  /** Replace a file's bucket. Returns false when nothing visible changed. */
+  setFile(path: string, tasks: Task[]): boolean {
+    const previous = this.byPath.get(path);
     if (tasks.length === 0) {
-      if (!this.byPath.delete(path)) return;
+      if (!this.byPath.delete(path)) return false;
     } else {
+      if (previous && sameTasks(previous, tasks)) return false;
       this.byPath.set(path, tasks);
     }
     this.snapshot = null;
+    return true;
   }
 
   removeFile(path: string): void {

@@ -69,3 +69,13 @@ test('snapshot identity is stable until a mutation', () => {
   core.setFile('b.md', [makeTask('- [ ] Due', 'b.md', 0)]);
   assert.notEqual(core.all(), first);
 });
+
+test('setFile reports whether the visible tasks changed', () => {
+  const core = new TaskIndexCore();
+  assert.equal(core.setFile('a.md', []), false);
+  assert.equal(core.setFile('a.md', [makeTask('- [ ] Uno', 'a.md', 0)]), true);
+  assert.equal(core.setFile('a.md', [makeTask('- [ ] Uno', 'a.md', 0)]), false);
+  assert.equal(core.setFile('a.md', [makeTask('- [ ] Uno', 'a.md', 2)]), true);
+  assert.equal(core.setFile('a.md', [makeTask('- [x] Uno', 'a.md', 2)]), true);
+  assert.equal(core.setFile('a.md', []), true);
+});
