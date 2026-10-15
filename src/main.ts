@@ -26,8 +26,13 @@ export default class RunwayPlugin extends Plugin {
     this.settings = parseSettings(await this.loadData());
     await this.seedFromDailyNotesConfig();
 
-    this.index = new TaskIndexService(this.app, (path) =>
-      isExcludedPath(path, this.settings.excludeFolders),
+    this.index = new TaskIndexService(
+      this.app,
+      (path) => isExcludedPath(path, this.settings.excludeFolders),
+      (path) => {
+        const root = this.settings.projectsFolder.replace(/\/+$/, '');
+        return root !== '' && path.startsWith(`${root}/`);
+      },
     );
     this.edits = new TaskEditService(this.app, () => this.settings);
     this.index.start(this);

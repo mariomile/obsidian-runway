@@ -4,6 +4,9 @@ import type { App, Plugin, TFile } from 'obsidian';
 
 import { TaskIndexService } from './index-service.ts';
 
+// queueNotify debounces through window timers.
+(globalThis as { window?: unknown }).window ??= globalThis;
+
 interface Deferred<T> {
   promise: Promise<T>;
   resolve(value: T): void;
@@ -17,10 +20,15 @@ function deferred<T>(): Deferred<T> {
   return { promise, resolve };
 }
 
-function harness(read: () => Promise<string>): {
+function harness(
+  read: () => Promise<string>,
+  isProjectNote: (path: string) => boolean = () => false,
+): {
   service: TaskIndexService;
   stop: () => void;
+  emitChanged: (path: string, data: string, cache: unknown) => void;
 } {
+  const handlers = new Map<string, (...args: unknown[]) => void>();
   const file = {
     path: 'Tasks.md',
     extension: 'md',
@@ -37,7 +45,10 @@ function harness(read: () => Promise<string>): {
   const app = {
     metadataCache: {
       getFileCache: () => cache,
-      on: () => ({}),
+      on: (name: string, handler: (...args: unknown[]) => void) => {
+        handlers.set(name, handler);
+        return {};
+      },
     },
     vault: {
       cachedRead: read,
@@ -55,13 +66,14 @@ function harness(read: () => Promise<string>): {
       cleanups.push(cleanup);
     },
   } as unknown as Plugin;
-  const service = new TaskIndexService(app, () => false);
+  const service = new TaskIndexService(app, () => false, isProjectNote);
   service.start(plugin);
   return {
     service,
     stop: () => {
       for (const cleanup of cleanups) cleanup();
     },
+    emitChanged: (path, data, metadata) => handlers.get('changed')?.({ path }, data, metadata),
   };
 }
 
@@ -96,4 +108,36 @@ test('an in-flight scan cannot publish after plugin unload', async () => {
 
   assert.equal(service.isReady(), false);
   assert.deepEqual(service.all(), []);
+});
+
+test('an edit to a project note without tasks still re-renders the panels', async () => {
+  const { service, stop, emitChanged } = harness(
+    () => Promise.resolve(''),
+    (path) => path.startsWith('Projects/'),
+  );
+  let notified = 0;
+  service.subscribe(() => {
+    notified += 1;
+  });
+
+  emitChanged('Notes/Plain.md', 'status: paused', {});
+  emitChanged('Projects/Alpha.md', 'status: paused', {});
+  await new Promise((done) => setTimeout(done, 350));
+  stop();
+
+  assert.equal(notified, 1);
+});
+
+test('an edit to a plain note without tasks does not re-render the panels', async () => {
+  const { service, stop, emitChanged } = harness(() => Promise.resolve(''));
+  let notified = 0;
+  service.subscribe(() => {
+    notified += 1;
+  });
+
+  emitChanged('Notes/Plain.md', 'just text', {});
+  await new Promise((done) => setTimeout(done, 350));
+  stop();
+
+  assert.equal(notified, 0);
 });

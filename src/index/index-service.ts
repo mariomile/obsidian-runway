@@ -43,6 +43,9 @@ export function extractTasks(path: string, content: string, cache: CachedMetadat
 export class TaskIndexService {
   private readonly app: App;
   private isExcluded: (path: string) => boolean;
+  /** Project notes feed the panels (group headers, project membership) without
+   *  being tasks, so their edits must re-render even when no task changed. */
+  private readonly isProjectNote: (path: string) => boolean;
   readonly core = new TaskIndexCore();
   private timer: number | null = null;
   private ready = false;
@@ -50,9 +53,14 @@ export class TaskIndexService {
   private stopped = true;
   private readonly completedListeners = new Set<(tasks: Task[]) => void>();
 
-  constructor(app: App, isExcluded: (path: string) => boolean) {
+  constructor(
+    app: App,
+    isExcluded: (path: string) => boolean,
+    isProjectNote: (path: string) => boolean,
+  ) {
     this.app = app;
     this.isExcluded = isExcluded;
+    this.isProjectNote = isProjectNote;
   }
 
   all(): Task[] {
@@ -81,8 +89,9 @@ export class TaskIndexService {
         const before = this.core.fileTasks(file.path);
         const after = extractTasks(file.path, data, cache);
         // Edits to notes without tasks (or to non-task lines) change nothing the
-        // panels render: skip the debounced re-render of every open view.
-        if (this.core.setFile(file.path, after)) this.queueNotify();
+        // panels render, except project notes: skip the re-render otherwise.
+        const tasksChanged = this.core.setFile(file.path, after);
+        if (tasksChanged || this.isProjectNote(file.path)) this.queueNotify();
         if (!this.ready) return;
         const completed = newlyCompleted(before, after);
         if (completed.length > 0) for (const listener of this.completedListeners) listener(completed);
