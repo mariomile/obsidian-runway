@@ -23,6 +23,7 @@ function deferred<T>(): Deferred<T> {
 function harness(
   read: () => Promise<string>,
   isProjectNote: (path: string) => boolean = () => false,
+  options: { files?: TFile[]; onLookup?: () => void } = {},
 ): {
   service: TaskIndexService;
   stop: () => void;
@@ -44,7 +45,10 @@ function harness(
   const cleanups: Array<() => void> = [];
   const app = {
     metadataCache: {
-      getFileCache: () => cache,
+      getFileCache: () => {
+        options.onLookup?.();
+        return cache;
+      },
       on: (name: string, handler: (...args: unknown[]) => void) => {
         handlers.set(name, handler);
         return {};
@@ -53,7 +57,7 @@ function harness(
     vault: {
       cachedRead: read,
       getFileByPath: () => file,
-      getMarkdownFiles: () => [file],
+      getMarkdownFiles: () => options.files ?? [file],
       on: () => ({}),
     },
     workspace: {
@@ -86,7 +90,11 @@ test('a stale rescan cannot overwrite a newer completed rescan', async () => {
   });
 
   const first = service.rescan(() => false);
-  await Promise.resolve();
+  // The scan yields before reading: wait until the stale read is in flight.
+  for (let i = 0; reads === 0; i++) {
+    assert.ok(i < 100, 'scan never read');
+    await new Promise((done) => window.setTimeout(done, 0));
+  }
   const second = service.rescan(() => false);
   await second;
   stale.resolve('- [ ] Stale task');
@@ -98,16 +106,72 @@ test('a stale rescan cannot overwrite a newer completed rescan', async () => {
 
 test('an in-flight scan cannot publish after plugin unload', async () => {
   const pending = deferred<string>();
-  const { service, stop } = harness(() => pending.promise);
+  let reads = 0;
+  const { service, stop } = harness(() => {
+    reads += 1;
+    return pending.promise;
+  });
 
   const scan = service.rescan(() => false);
-  await Promise.resolve();
+  // The scan yields before reading: wait until the read is in flight.
+  for (let i = 0; reads === 0; i++) {
+    assert.ok(i < 100, 'scan never read');
+    await new Promise((done) => window.setTimeout(done, 0));
+  }
   stop();
   pending.resolve('- [ ] Late task');
   await scan;
 
   assert.equal(service.isReady(), false);
   assert.deepEqual(service.all(), []);
+});
+
+test('a scan stopped during the pending yield never filters or reads', async () => {
+  let reads = 0;
+  let lookups = 0;
+  const files = Array.from({ length: 1200 }, (_, i) => ({ path: `N${i}.md`, extension: 'md' }) as TFile);
+  const { service, stop } = harness(
+    () => {
+      reads += 1;
+      return Promise.resolve('- [ ] x');
+    },
+    undefined,
+    { files, onLookup: () => (lookups += 1) },
+  );
+
+  const scan = service.rescan(() => false);
+  // Nothing runs synchronously inside onload.
+  assert.equal(lookups, 0);
+  // Unload while the yield is pending.
+  stop();
+  await scan;
+
+  assert.equal(reads, 0);
+  assert.equal(lookups, 0);
+});
+
+test('a scan superseded during the pending yield never filters or reads', async () => {
+  let reads = 0;
+  let lookups = 0;
+  const files = Array.from({ length: 1200 }, (_, i) => ({ path: `N${i}.md`, extension: 'md' }) as TFile);
+  const { service, stop } = harness(
+    () => {
+      reads += 1;
+      return Promise.resolve('- [ ] x');
+    },
+    undefined,
+    { files, onLookup: () => (lookups += 1) },
+  );
+
+  const first = service.rescan(() => false);
+  const second = service.rescan(() => false);
+  await Promise.all([first, second]);
+  stop();
+
+  // Only the second scan runs: one filter lookup and one index lookup per file.
+  assert.equal(reads, files.length);
+  assert.equal(lookups, files.length * 2);
+  assert.equal(service.all().length, files.length);
 });
 
 test('an edit to a project note without tasks still re-renders the panels', async () => {

@@ -1,6 +1,6 @@
 {
   "name": "runway",
-  "version": "0.3.5",
+  "version": "0.3.6",
   "description": "Task management for Obsidian: sidebar glance + filterable task list, emoji-syntax compatible.",
   "main": "main.js",
   "type": "module",
