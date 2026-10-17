@@ -23,8 +23,9 @@ export default class RunwayPlugin extends Plugin {
   private edits!: TaskEditService;
 
   async onload(): Promise<void> {
-    this.settings = parseSettings(await this.loadData());
-    await this.seedFromDailyNotesConfig();
+    const data: unknown = await this.loadData();
+    this.settings = parseSettings(data);
+    await this.seedFromDailyNotesConfig(data);
 
     this.index = new TaskIndexService(
       this.app,
@@ -187,8 +188,8 @@ export default class RunwayPlugin extends Plugin {
    * First run only: mirror the core daily-notes config (folder/format) so the
    * quick-add default target agrees with the vault.
    */
-  private async seedFromDailyNotesConfig(): Promise<void> {
-    if ((await this.loadData()) !== null) return;
+  private async seedFromDailyNotesConfig(data: unknown): Promise<void> {
+    if (data !== null) return;
     try {
       const raw = await this.app.vault.adapter.read(
         `${this.app.vault.configDir}/daily-notes.json`,
