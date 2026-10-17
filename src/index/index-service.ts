@@ -8,7 +8,22 @@ import { TaskIndexCore } from './task-index.ts';
 import type { Task } from '../types.ts';
 
 const SCAN_CHUNK = 32;
+/** Files pre-filtered per macrotask, so the scan never blocks enable/startup. */
+const FILTER_CHUNK = 500;
 const EMIT_DEBOUNCE_MS = 300;
+
+/** Yield one macrotask. A posted message, not setTimeout: Chromium throttles
+ *  timer chains in a hidden window to about one per minute. */
+function yieldTask(): Promise<void> {
+  return new Promise((done) => {
+    const channel = new MessageChannel();
+    channel.port1.onmessage = () => {
+      channel.port1.close();
+      done();
+    };
+    channel.port2.postMessage(null);
+  });
+}
 
 function isMarkdownFile(file: TAbstractFile): file is TFile {
   return 'extension' in file && (file as TFile).extension === 'md';
@@ -162,11 +177,16 @@ export class TaskIndexService {
     this.ready = false;
     this.core.clear();
     const taskFiles: TFile[] = [];
-    for (const file of this.app.vault.getMarkdownFiles()) {
-      if (this.isExcluded(file.path)) continue;
-      const cache = this.app.metadataCache.getFileCache(file);
-      const hasTasks = cache?.listItems?.some((item) => item.task !== undefined) ?? false;
-      if (hasTasks) taskFiles.push(file);
+    const files = this.app.vault.getMarkdownFiles();
+    for (let i = 0; i < files.length; i += FILTER_CHUNK) {
+      await yieldTask();
+      if (this.stopped || generation !== this.scanGeneration) return;
+      for (const file of files.slice(i, i + FILTER_CHUNK)) {
+        if (this.isExcluded(file.path)) continue;
+        const cache = this.app.metadataCache.getFileCache(file);
+        const hasTasks = cache?.listItems?.some((item) => item.task !== undefined) ?? false;
+        if (hasTasks) taskFiles.push(file);
+      }
     }
     for (let i = 0; i < taskFiles.length; i += SCAN_CHUNK) {
       const chunk = taskFiles.slice(i, i + SCAN_CHUNK);

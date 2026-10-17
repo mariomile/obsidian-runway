@@ -86,7 +86,8 @@ test('a stale rescan cannot overwrite a newer completed rescan', async () => {
   });
 
   const first = service.rescan(() => false);
-  await Promise.resolve();
+  // The scan yields before reading: wait until the stale read is in flight.
+  while (reads === 0) await new Promise((done) => window.setTimeout(done, 0));
   const second = service.rescan(() => false);
   await second;
   stale.resolve('- [ ] Stale task');
@@ -98,10 +99,15 @@ test('a stale rescan cannot overwrite a newer completed rescan', async () => {
 
 test('an in-flight scan cannot publish after plugin unload', async () => {
   const pending = deferred<string>();
-  const { service, stop } = harness(() => pending.promise);
+  let reads = 0;
+  const { service, stop } = harness(() => {
+    reads += 1;
+    return pending.promise;
+  });
 
   const scan = service.rescan(() => false);
-  await Promise.resolve();
+  // The scan yields before reading: wait until the read is in flight.
+  while (reads === 0) await new Promise((done) => window.setTimeout(done, 0));
   stop();
   pending.resolve('- [ ] Late task');
   await scan;
